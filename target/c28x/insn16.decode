@@ -1,0 +1,6 @@
+&xarn_imm7          xarn imm7
+
+@op_xarn_imm7       .... . xarn:3 . imm7:7                        &xarn_imm7
+
+ADDB_xarn_7bit       1101 1... 0... ....                         @op_xarn_imm7
+LB_xar7              0111 0110 0010 0000

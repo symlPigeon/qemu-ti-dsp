@@ -1,0 +1,2 @@
+config C28X
+    bool
