@@ -1,7 +1,6 @@
 #ifndef QEMU_ARCH_INIT_H
 #define QEMU_ARCH_INIT_H
 
-
 enum {
     QEMU_ARCH_ALL = -1,
     QEMU_ARCH_ALPHA = (1 << 0),
@@ -23,6 +22,7 @@ enum {
     QEMU_ARCH_AVR = (1 << 21),
     QEMU_ARCH_HEXAGON = (1 << 22),
     QEMU_ARCH_LOONGARCH = (1 << 23),
+    QEMU_ARCH_C28X = (1 << 24),
 };
 
 extern const uint32_t arch_type;

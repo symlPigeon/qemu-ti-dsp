@@ -41,11 +41,10 @@ enum bfd_flavour {
 
 enum bfd_endian { BFD_ENDIAN_BIG, BFD_ENDIAN_LITTLE, BFD_ENDIAN_UNKNOWN };
 
-enum bfd_architecture
-{
-  bfd_arch_unknown,    /* File arch not known */
-  bfd_arch_obscure,    /* Arch known, not one of these */
-  bfd_arch_m68k,       /* Motorola 68xxx */
+enum bfd_architecture {
+    bfd_arch_unknown, /* File arch not known */
+    bfd_arch_obscure, /* Arch known, not one of these */
+    bfd_arch_m68k,    /* Motorola 68xxx */
 #define bfd_mach_m68000 1
 #define bfd_mach_m68008 2
 #define bfd_mach_m68010 3
@@ -64,9 +63,9 @@ enum bfd_architecture
 #define bfd_mach_mcf5249   16
 #define bfd_mach_mcf547x   17
 #define bfd_mach_mcf548x   18
-  bfd_arch_vax,        /* DEC Vax */
-  bfd_arch_i960,       /* Intel 960 */
-     /* The order of the following is important.
+    bfd_arch_vax,  /* DEC Vax */
+    bfd_arch_i960, /* Intel 960 */
+                   /* The order of the following is important.
        lower number indicates a machine type that
        only accepts a subset of the instructions
        available to machines with higher numbers.
@@ -74,146 +73,147 @@ enum bfd_architecture
        incompatible with all other machines except
        "core". */
 
-#define bfd_mach_i960_core      1
-#define bfd_mach_i960_ka_sa     2
-#define bfd_mach_i960_kb_sb     3
-#define bfd_mach_i960_mc        4
-#define bfd_mach_i960_xa        5
-#define bfd_mach_i960_ca        6
-#define bfd_mach_i960_jx        7
-#define bfd_mach_i960_hx        8
+#define bfd_mach_i960_core  1
+#define bfd_mach_i960_ka_sa 2
+#define bfd_mach_i960_kb_sb 3
+#define bfd_mach_i960_mc    4
+#define bfd_mach_i960_xa    5
+#define bfd_mach_i960_ca    6
+#define bfd_mach_i960_jx    7
+#define bfd_mach_i960_hx    8
 
-  bfd_arch_a29k,       /* AMD 29000 */
-  bfd_arch_sparc,      /* SPARC */
-#define bfd_mach_sparc                 1
+    bfd_arch_a29k,  /* AMD 29000 */
+    bfd_arch_sparc, /* SPARC */
+#define bfd_mach_sparc 1
 /* The difference between v8plus and v9 is that v9 is a true 64 bit env.  */
-#define bfd_mach_sparc_sparclet        2
-#define bfd_mach_sparc_sparclite       3
-#define bfd_mach_sparc_v8plus          4
-#define bfd_mach_sparc_v8plusa         5 /* with ultrasparc add'ns.  */
-#define bfd_mach_sparc_sparclite_le    6
-#define bfd_mach_sparc_v9              7
-#define bfd_mach_sparc_v9a             8 /* with ultrasparc add'ns.  */
-#define bfd_mach_sparc_v8plusb         9 /* with cheetah add'ns.  */
-#define bfd_mach_sparc_v9b             10 /* with cheetah add'ns.  */
+#define bfd_mach_sparc_sparclet     2
+#define bfd_mach_sparc_sparclite    3
+#define bfd_mach_sparc_v8plus       4
+#define bfd_mach_sparc_v8plusa      5 /* with ultrasparc add'ns.  */
+#define bfd_mach_sparc_sparclite_le 6
+#define bfd_mach_sparc_v9           7
+#define bfd_mach_sparc_v9a          8  /* with ultrasparc add'ns.  */
+#define bfd_mach_sparc_v8plusb      9  /* with cheetah add'ns.  */
+#define bfd_mach_sparc_v9b          10 /* with cheetah add'ns.  */
 /* Nonzero if MACH has the v9 instruction set.  */
-#define bfd_mach_sparc_v9_p(mach) \
-  ((mach) >= bfd_mach_sparc_v8plus && (mach) <= bfd_mach_sparc_v9b \
-   && (mach) != bfd_mach_sparc_sparclite_le)
-  bfd_arch_mips,       /* MIPS Rxxxx */
-#define bfd_mach_mips3000              3000
-#define bfd_mach_mips3900              3900
-#define bfd_mach_mips4000              4000
-#define bfd_mach_mips4010              4010
-#define bfd_mach_mips4100              4100
-#define bfd_mach_mips4300              4300
-#define bfd_mach_mips4400              4400
-#define bfd_mach_mips4600              4600
-#define bfd_mach_mips4650              4650
-#define bfd_mach_mips5000              5000
-#define bfd_mach_mips6000              6000
-#define bfd_mach_mips8000              8000
-#define bfd_mach_mips10000             10000
-#define bfd_mach_mips16                16
-  bfd_arch_i386,       /* Intel 386 */
-#define bfd_mach_i386_i386 0
-#define bfd_mach_i386_i8086 1
+#define bfd_mach_sparc_v9_p(mach)                                                                                      \
+    ((mach) >= bfd_mach_sparc_v8plus && (mach) <= bfd_mach_sparc_v9b && (mach) != bfd_mach_sparc_sparclite_le)
+    bfd_arch_mips, /* MIPS Rxxxx */
+#define bfd_mach_mips3000  3000
+#define bfd_mach_mips3900  3900
+#define bfd_mach_mips4000  4000
+#define bfd_mach_mips4010  4010
+#define bfd_mach_mips4100  4100
+#define bfd_mach_mips4300  4300
+#define bfd_mach_mips4400  4400
+#define bfd_mach_mips4600  4600
+#define bfd_mach_mips4650  4650
+#define bfd_mach_mips5000  5000
+#define bfd_mach_mips6000  6000
+#define bfd_mach_mips8000  8000
+#define bfd_mach_mips10000 10000
+#define bfd_mach_mips16    16
+    bfd_arch_i386, /* Intel 386 */
+#define bfd_mach_i386_i386              0
+#define bfd_mach_i386_i8086             1
 #define bfd_mach_i386_i386_intel_syntax 2
-#define bfd_mach_x86_64 3
-#define bfd_mach_x86_64_intel_syntax 4
-  bfd_arch_we32k,      /* AT&T WE32xxx */
-  bfd_arch_tahoe,      /* CCI/Harris Tahoe */
-  bfd_arch_i860,       /* Intel 860 */
-  bfd_arch_romp,       /* IBM ROMP PC/RT */
-  bfd_arch_alliant,    /* Alliant */
-  bfd_arch_convex,     /* Convex */
-  bfd_arch_m88k,       /* Motorola 88xxx */
-  bfd_arch_pyramid,    /* Pyramid Technology */
-  bfd_arch_h8300,      /* Hitachi H8/300 */
-#define bfd_mach_h8300   1
-#define bfd_mach_h8300h  2
-#define bfd_mach_h8300s  3
-  bfd_arch_powerpc,    /* PowerPC */
-#define bfd_mach_ppc           0
-#define bfd_mach_ppc64         1
-#define bfd_mach_ppc_403       403
-#define bfd_mach_ppc_403gc     4030
-#define bfd_mach_ppc_e500      500
-#define bfd_mach_ppc_505       505
-#define bfd_mach_ppc_601       601
-#define bfd_mach_ppc_602       602
-#define bfd_mach_ppc_603       603
-#define bfd_mach_ppc_ec603e    6031
-#define bfd_mach_ppc_604       604
-#define bfd_mach_ppc_620       620
-#define bfd_mach_ppc_630       630
-#define bfd_mach_ppc_750       750
-#define bfd_mach_ppc_860       860
-#define bfd_mach_ppc_a35       35
-#define bfd_mach_ppc_rs64ii    642
-#define bfd_mach_ppc_rs64iii   643
-#define bfd_mach_ppc_7400      7400
-  bfd_arch_rs6000,     /* IBM RS/6000 */
-  bfd_arch_hppa,       /* HP PA RISC */
-#define bfd_mach_hppa10        10
-#define bfd_mach_hppa11        11
-#define bfd_mach_hppa20        20
-#define bfd_mach_hppa20w       25
-  bfd_arch_d10v,       /* Mitsubishi D10V */
-  bfd_arch_z8k,        /* Zilog Z8000 */
-#define bfd_mach_z8001         1
-#define bfd_mach_z8002         2
-  bfd_arch_h8500,      /* Hitachi H8/500 */
-  bfd_arch_sh,         /* Hitachi SH */
-#define bfd_mach_sh            1
-#define bfd_mach_sh2        0x20
-#define bfd_mach_sh_dsp     0x2d
-#define bfd_mach_sh2a       0x2a
-#define bfd_mach_sh2a_nofpu 0x2b
-#define bfd_mach_sh2e       0x2e
-#define bfd_mach_sh3        0x30
-#define bfd_mach_sh3_nommu  0x31
-#define bfd_mach_sh3_dsp    0x3d
-#define bfd_mach_sh3e       0x3e
-#define bfd_mach_sh4        0x40
-#define bfd_mach_sh4_nofpu  0x41
-#define bfd_mach_sh4_nommu_nofpu  0x42
-#define bfd_mach_sh4a       0x4a
-#define bfd_mach_sh4a_nofpu 0x4b
-#define bfd_mach_sh4al_dsp  0x4d
-#define bfd_mach_sh5        0x50
-  bfd_arch_alpha,      /* Dec Alpha */
-#define bfd_mach_alpha 1
-#define bfd_mach_alpha_ev4  0x10
-#define bfd_mach_alpha_ev5  0x20
-#define bfd_mach_alpha_ev6  0x30
-  bfd_arch_arm,        /* Advanced Risc Machines ARM */
-#define bfd_mach_arm_unknown  0
-#define bfd_mach_arm_2        1
-#define bfd_mach_arm_2a       2
-#define bfd_mach_arm_3        3
-#define bfd_mach_arm_3M       4
-#define bfd_mach_arm_4        5
-#define bfd_mach_arm_4T       6
-#define bfd_mach_arm_5        7
-#define bfd_mach_arm_5T       8
-#define bfd_mach_arm_5TE      9
-#define bfd_mach_arm_XScale   10
-#define bfd_mach_arm_ep9312   11
-#define bfd_mach_arm_iWMMXt   12
-#define bfd_mach_arm_iWMMXt2  13
-  bfd_arch_ns32k,      /* National Semiconductors ns32000 */
-  bfd_arch_w65,        /* WDC 65816 */
-  bfd_arch_tic30,      /* Texas Instruments TMS320C30 */
-  bfd_arch_v850,       /* NEC V850 */
-#define bfd_mach_v850          0
-  bfd_arch_arc,        /* Argonaut RISC Core */
+#define bfd_mach_x86_64                 3
+#define bfd_mach_x86_64_intel_syntax    4
+    bfd_arch_we32k,   /* AT&T WE32xxx */
+    bfd_arch_tahoe,   /* CCI/Harris Tahoe */
+    bfd_arch_i860,    /* Intel 860 */
+    bfd_arch_romp,    /* IBM ROMP PC/RT */
+    bfd_arch_alliant, /* Alliant */
+    bfd_arch_convex,  /* Convex */
+    bfd_arch_m88k,    /* Motorola 88xxx */
+    bfd_arch_pyramid, /* Pyramid Technology */
+    bfd_arch_h8300,   /* Hitachi H8/300 */
+#define bfd_mach_h8300  1
+#define bfd_mach_h8300h 2
+#define bfd_mach_h8300s 3
+    bfd_arch_powerpc, /* PowerPC */
+#define bfd_mach_ppc         0
+#define bfd_mach_ppc64       1
+#define bfd_mach_ppc_403     403
+#define bfd_mach_ppc_403gc   4030
+#define bfd_mach_ppc_e500    500
+#define bfd_mach_ppc_505     505
+#define bfd_mach_ppc_601     601
+#define bfd_mach_ppc_602     602
+#define bfd_mach_ppc_603     603
+#define bfd_mach_ppc_ec603e  6031
+#define bfd_mach_ppc_604     604
+#define bfd_mach_ppc_620     620
+#define bfd_mach_ppc_630     630
+#define bfd_mach_ppc_750     750
+#define bfd_mach_ppc_860     860
+#define bfd_mach_ppc_a35     35
+#define bfd_mach_ppc_rs64ii  642
+#define bfd_mach_ppc_rs64iii 643
+#define bfd_mach_ppc_7400    7400
+    bfd_arch_rs6000, /* IBM RS/6000 */
+    bfd_arch_hppa,   /* HP PA RISC */
+#define bfd_mach_hppa10  10
+#define bfd_mach_hppa11  11
+#define bfd_mach_hppa20  20
+#define bfd_mach_hppa20w 25
+    bfd_arch_d10v, /* Mitsubishi D10V */
+    bfd_arch_z8k,  /* Zilog Z8000 */
+#define bfd_mach_z8001 1
+#define bfd_mach_z8002 2
+    bfd_arch_h8500, /* Hitachi H8/500 */
+    bfd_arch_sh,    /* Hitachi SH */
+#define bfd_mach_sh              1
+#define bfd_mach_sh2             0x20
+#define bfd_mach_sh_dsp          0x2d
+#define bfd_mach_sh2a            0x2a
+#define bfd_mach_sh2a_nofpu      0x2b
+#define bfd_mach_sh2e            0x2e
+#define bfd_mach_sh3             0x30
+#define bfd_mach_sh3_nommu       0x31
+#define bfd_mach_sh3_dsp         0x3d
+#define bfd_mach_sh3e            0x3e
+#define bfd_mach_sh4             0x40
+#define bfd_mach_sh4_nofpu       0x41
+#define bfd_mach_sh4_nommu_nofpu 0x42
+#define bfd_mach_sh4a            0x4a
+#define bfd_mach_sh4a_nofpu      0x4b
+#define bfd_mach_sh4al_dsp       0x4d
+#define bfd_mach_sh5             0x50
+    bfd_arch_alpha, /* Dec Alpha */
+#define bfd_mach_alpha     1
+#define bfd_mach_alpha_ev4 0x10
+#define bfd_mach_alpha_ev5 0x20
+#define bfd_mach_alpha_ev6 0x30
+    bfd_arch_arm, /* Advanced Risc Machines ARM */
+#define bfd_mach_arm_unknown 0
+#define bfd_mach_arm_2       1
+#define bfd_mach_arm_2a      2
+#define bfd_mach_arm_3       3
+#define bfd_mach_arm_3M      4
+#define bfd_mach_arm_4       5
+#define bfd_mach_arm_4T      6
+#define bfd_mach_arm_5       7
+#define bfd_mach_arm_5T      8
+#define bfd_mach_arm_5TE     9
+#define bfd_mach_arm_XScale  10
+#define bfd_mach_arm_ep9312  11
+#define bfd_mach_arm_iWMMXt  12
+#define bfd_mach_arm_iWMMXt2 13
+    bfd_arch_ns32k, /* National Semiconductors ns32000 */
+    bfd_arch_w65,   /* WDC 65816 */
+    bfd_arch_tic30, /* Texas Instruments TMS320C30 */
+    bfd_arch_v850,  /* NEC V850 */
+#define bfd_mach_v850 0
+    bfd_arch_arc, /* Argonaut RISC Core */
 #define bfd_mach_arc_base 0
-  bfd_arch_m32r,       /* Mitsubishi M32R/D */
-#define bfd_mach_m32r          0  /* backwards compatibility */
-  bfd_arch_mn10200,    /* Matsushita MN10200 */
-  bfd_arch_mn10300,    /* Matsushita MN10300 */
-  bfd_arch_avr,        /* AVR microcontrollers */
+    bfd_arch_m32r,      /* Mitsubishi M32R/D */
+#define bfd_mach_m32r 0 /* backwards compatibility */
+    bfd_arch_mn10200,   /* Matsushita MN10200 */
+    bfd_arch_mn10300,   /* Matsushita MN10300 */
+    bfd_arch_c28x,      /* Texas Instruments C28x */
+#define bfs_mach_c28xexpc 50
+    bfd_arch_avr, /* AVR microcontrollers */
 #define bfd_mach_avr1       1
 #define bfd_mach_avr2       2
 #define bfd_mach_avr25      25
@@ -232,18 +232,18 @@ enum bfd_architecture
 #define bfd_mach_avrxmega5  105
 #define bfd_mach_avrxmega6  106
 #define bfd_mach_avrxmega7  107
-  bfd_arch_microblaze, /* Xilinx MicroBlaze.  */
-  bfd_arch_moxie,      /* The Moxie core.  */
-  bfd_arch_ia64,      /* HP/Intel ia64 */
+    bfd_arch_microblaze, /* Xilinx MicroBlaze.  */
+    bfd_arch_moxie,      /* The Moxie core.  */
+    bfd_arch_ia64,       /* HP/Intel ia64 */
 #define bfd_mach_ia64_elf64    64
 #define bfd_mach_ia64_elf32    32
-  bfd_arch_rx,       /* Renesas RX */
+    bfd_arch_rx, /* Renesas RX */
 #define bfd_mach_rx            0x75
 #define bfd_mach_rx_v2         0x76
 #define bfd_mach_rx_v3         0x77
-  bfd_arch_loongarch,
-  bfd_arch_last
-  };
+    bfd_arch_loongarch,
+    bfd_arch_last
+};
 #define bfd_mach_s390_31 31
 #define bfd_mach_s390_64 64
 
