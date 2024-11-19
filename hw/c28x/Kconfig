@@ -1,0 +1,6 @@
+config C28XEXP_MCU
+    bool
+
+config C28XEXAMPLE_BOARD
+    bool
+    select C28XEXP_MCU
