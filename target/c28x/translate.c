@@ -13,7 +13,11 @@
 #include "tcg/tcg-op.h"
 #include "tcg/tcg.h"
 
+// CPU registers
 static TCGv cpu_r[C28X_REG_PAGE_SIZE];
+
+// CPU Status Registers
+static TCGv cpu_sr[C28X_SR_PAGE_SIZE];
 
 #define DISAS_EXIT   DISAS_TARGET_0 /* We want return to the cpu main loop.  */
 #define DISAS_LOOKUP DISAS_TARGET_1 /* We have a variable condition exit.  */
@@ -30,8 +34,13 @@ struct DisasContext {
 
 void c28x_tcg_init(void) {
     int i;
+    // Initialize CPU registers
     for (i = 0; i < C28X_REG_PAGE_SIZE; i++) {
         cpu_r[i] = tcg_global_mem_new_i32(tcg_env, offsetof(CPUC28XState, r[i]), c28x_cpu_r_names[i]);
+    }
+    // Initialize CPU Status Registers
+    for (i = 0; i < C28X_SR_PAGE_SIZE; i++) {
+        cpu_sr[i] = tcg_global_mem_new_i32(tcg_env, offsetof(CPUC28XState, sr[i]), c28x_cpu_sr_names[i]);
     }
 }
 
@@ -56,6 +65,56 @@ static bool decode_insn(DisasContext* ctx, uint32_t insn);
 // ==============================================
 
 // ** insert code here **
+
+static bool trans_ABS_acc(DisasContext* ctx, arg_ABS_acc* a) {
+    TCGLabel* label_end_acc = gen_new_label();
+
+    // if ACC == 0x80000000
+    TCGLabel* label_if_acc_neq = gen_new_label();
+    tcg_gen_brcondi_i32(TCG_COND_NE, cpu_r[C28X_REG_ACC], 0x80000000, label_if_acc_neq);
+    //   V = 1
+    tcg_gen_movi_i32(cpu_sr[V_FLAG], 1);
+    //   if ovm = 1
+    TCGLabel* label_ovm_not_1 = gen_new_label();
+    tcg_gen_brcondi_i32(TCG_COND_NE, cpu_sr[OVM_FLAG], 1, label_ovm_not_1);
+    //      acc = 0x7FFFFFFF
+    tcg_gen_movi_i32(cpu_r[C28X_REG_ACC], 0x7FFFFFFF);
+    tcg_gen_br(label_end_acc);
+    //   else
+    gen_set_label(label_ovm_not_1);
+    //      acc = 0x80000000
+    tcg_gen_movi_i32(cpu_r[C28X_REG_ACC], 0x80000000);
+    tcg_gen_br(label_end_acc);
+
+    // else
+    gen_set_label(label_if_acc_neq);
+    //     acc = abs(acc)
+    tcg_gen_abs_i32(cpu_r[C28X_REG_ACC], cpu_r[C28X_REG_ACC]);
+
+    // end function
+    gen_set_label(label_end_acc);
+
+    //  N flag is set if bit 31 of acc is 1.
+    TCGv_i32 tmp = tcg_temp_new_i32();
+    tcg_gen_andi_i32(tmp, cpu_r[C28X_REG_ACC], 0x80000000);
+    tcg_gen_shri_i32(tmp, tmp, 31);
+    tcg_gen_mov_i32(cpu_sr[N_FLAG], tmp);
+    // Z flag is set if acc is 0.
+    TCGLabel* label_z_flag_not_set = gen_new_label();
+    tcg_gen_brcondi_i32(TCG_COND_NE, cpu_r[C28X_REG_ACC], 0, label_z_flag_not_set);
+    tcg_gen_movi_i32(cpu_sr[Z_FLAG], 1);
+    gen_set_label(label_z_flag_not_set);
+    // C is cleared
+    tcg_gen_movi_i32(cpu_sr[C_FLAG], 0);
+    return true;
+}
+
+static bool trans_ABSTC_acc(DisasContext* ctx, arg_ABSTC_acc* a) {
+    trans_ABS_acc(ctx, (arg_ABS_acc*)a);
+    // TC = TC ^ 1
+    tcg_gen_xori_i32(cpu_sr[TC_FLAG], cpu_sr[TC_FLAG], 1);
+    return true;
+}
 
 static bool trans_ADDB_xarn_7bit(DisasContext* ctx, arg_ADDB_xarn_7bit* a) {
     // No flags and modes

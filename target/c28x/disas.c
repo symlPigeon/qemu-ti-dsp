@@ -29,6 +29,8 @@ static bool decode_insn(DisasContext* ctx, uint32_t insn);
 #define REG(x)  c28x_cpu_r_names[x]
 #define XARn(x) c28x_cpu_r_names[C28X_REG_XAR0 + x]
 
+INSN(ABS_acc, ABS, "ACC")
+INSN(ABSTC_acc, ABSTC, "ACC")
 INSN(ADDB_xarn_7bit, ADDB, "%s, %d", XARn(a->xarn), a->imm7)
 INSN(LB_xar7, LB, "")
 INSN(MOVL_xar0_imm22, MOVL, "%d", a->imm22)

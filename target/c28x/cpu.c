@@ -30,6 +30,13 @@ static void c28x_cpu_init(Object* obj) {
     CPUC28XState* env = &cpu->env;
 
     // do some init here
+    // env->r[C28X_REG_PC] = 0x3FFFC0; // NOTE: PC should be set to 0x3FFFC0, but set to 0 is easier for debug
+    env->r[C28X_REG_SP] = 0x0400;
+    env->sr[MOM1MAP_FLAG] = 1;
+    env->sr[VMAP_FLAG] = 1;
+    env->sr[DBGM_FLAG] = 1;
+    env->sr[INTM_FLAG] = 1;
+    env->r[C28X_REG_ACC] = 0xf0001111;
 };
 
 static void c28x_cpu_realizefn(DeviceState* dev, Error** errp) {
@@ -67,17 +74,19 @@ static void c28x_cpu_reset(Object* dev, ResetType type) {
         first_reset = false;
     }
 
-    env->sr = 0;
-
     // FIXME: cpu registers are not all zeros on reset!
     // NOTE: set register status here! For example:
-    // env->r[C28X_REG_ACC] = 0;
+    // env->r[C28X_REG_PC] = 0x3FFFC0; // NOTE: PC should be set to 0x3FFFC0, but set to 0 is easier for debug
+    env->r[C28X_REG_SP] = 0x0400;
+    env->sr[MOM1MAP_FLAG] = 1;
+    env->sr[VMAP_FLAG] = 1;
+    env->sr[DBGM_FLAG] = 1;
+    env->sr[INTM_FLAG] = 1;
 
     printf("[C28X-CPU] CPU Reset\n");
 
     // NOTE: set the start addr of exec
     env->r[C28X_REG_PC] = 0x00000000;    // FIXME: C28X PC reset to 0x3FFFC0
-    // set other registers...
 }
 
 static ObjectClass* c28x_cpu_class_by_name(const char* cpu_model) {
@@ -105,8 +114,6 @@ static void c28x_cpu_dump_state(CPUState* cs, FILE* f, int flags) {
     qemu_fprintf(f, "RPC:   " TARGET_FMT_lx "\n", env->r[C28X_REG_RPC]);
     qemu_fprintf(f, "DP:   " TARGET_FMT_lx "\n", env->r[C28X_REG_DP]);
     qemu_fprintf(f, "SP:    " TARGET_FMT_lx "\n", env->r[C28X_REG_SP]);
-    qemu_fprintf(f, "ST0:   " TARGET_FMT_lx "\n", env->r[C28X_REG_ST0]);
-    qemu_fprintf(f, "ST1:   " TARGET_FMT_lx "\n", env->r[C28X_REG_ST1]);
     qemu_fprintf(f, "XT:    " TARGET_FMT_lx "\n", env->r[C28X_REG_XT]);
     qemu_fprintf(f, "ACC:   " TARGET_FMT_lx "\n", env->r[C28X_REG_ACC]);
     qemu_fprintf(f, "P:     " TARGET_FMT_lx "\n", env->r[C28X_REG_P]);

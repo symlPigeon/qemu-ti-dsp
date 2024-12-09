@@ -19,11 +19,11 @@
 // PC (Program Counter) / 22-bit
 // RPC (Return Program Counter) / 22-bit
 // SP (Stack Pointer) / 16-bit
-// ST0 - ST1 (Status registers) / 16-bit
 // XT = T + TL (Multiplicand register) / 32-bit
 // =================
-// Total 20 registers
-#define C28X_REG_PAGE_SIZE 20
+// Total 18 registers
+// NOTE: here we delete ST0 and ST1 registers, as they should be status registers, not general purpose registers
+#define C28X_REG_PAGE_SIZE 18
 // Register ID, just for reference
 #define C28X_REG_ACC    0
 #define C28X_REG_XAR0   1
@@ -42,9 +42,32 @@
 #define C28X_REG_PC     14
 #define C28X_REG_RPC    15
 #define C28X_REG_SP     16
-#define C28X_REG_ST0    17
-#define C28X_REG_ST1    18
-#define C28X_REG_XT     19
+#define C28X_REG_XT     17
+
+// Definitions for the CPU Status Registers
+#define C28X_SR_PAGE_SIZE 22
+#define OVC_FLAG          0
+#define PM_FLAG           1
+#define V_FLAG            2
+#define N_FLAG            3
+#define Z_FLAG            4
+#define C_FLAG            5
+#define TC_FLAG           6
+#define OVM_FLAG          7
+#define SXM_FLAG          8
+#define ARP_FLAG          9
+#define XF_FLAG           10
+#define MOM1MAP_FLAG      11
+#define OBJMODE_FLAG      12
+#define AMODE_FLAG        13
+#define IDLESTAT_FLAG     14
+#define EALLOW_FLAG       15
+#define LOOP_FLAG         16
+#define SPA_FLAG          17
+#define VMAP_FLAG         18
+#define PAGE0_FLAG        19
+#define DBGM_FLAG         20
+#define INTM_FLAG         21
 
 #define CPU_RESOLVING_TYPE TYPE_C28X_CPU
 
@@ -56,17 +79,18 @@ struct C28XCPUDef {
     size_t clock_speed;
 };
 
-static const char c28x_cpu_r_names[C28X_REG_PAGE_SIZE][8] = {"ACC",  "XAR0", "XAR1", "XAR2", "XAR3", "XAR4",   "XAR5",
-                                                             "XAR6", "XAR7", "DP",   "IFR",  "IER",  "DBGIER", "P",
-                                                             "PC",   "RPC",  "SP",   "ST0",  "ST1",  "XT"};
+static const char c28x_cpu_r_names[C28X_REG_PAGE_SIZE][8] = {"ACC",    "XAR0", "XAR1", "XAR2", "XAR3", "XAR4",
+                                                             "XAR5",   "XAR6", "XAR7", "DP",   "IFR",  "IER",
+                                                             "DBGIER", "P",    "PC",   "RPC",  "SP",   "XT"};
+static const char c28x_cpu_sr_names[C28X_SR_PAGE_SIZE][8] = {
+    "OVC",     "PM",      "V",     "N",        "Z",      "C",    "TC",  "OVM",  "SXM",   "ARP",  "XF",
+    "MOM1MAP", "OBJMODE", "AMODE", "IDLESTAT", "EALLOW", "LOOP", "SPA", "VMAP", "PAGE0", "DBGM", "INTM"};
 
 typedef struct CPUArchState {
-    // Status Register
-    uint32_t sr;
-    uint32_t pc_w;
-
     // Register File Registers
     uint32_t r[C28X_REG_PAGE_SIZE];
+    // Status Registers
+    uint32_t sr[C28X_SR_PAGE_SIZE];
 
     // interrupt source
     // FIXME: figure out how to write this
@@ -77,12 +101,6 @@ struct ArchCPU {
     CPUState parent_obj;
 
     // < public >
-    // ? In some other implementations, this neg is used
-    // ? But in my case, an error is thrown:
-    // ? ===========
-    // ? !(__builtin_offsetof(struct ArchCPU, env) != sizeof(struct CPUState))': not expecting: offsetof(ArchCPU, env)
-    // ? != sizeof(CPUState) CPUNegativeOffsetState neg;
-    // ? ===========
     CPUC28XState env;
 };
 
