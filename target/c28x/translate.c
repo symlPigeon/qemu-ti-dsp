@@ -11,6 +11,7 @@
 #include "stdlib.h"
 #include "tcg/tcg-op-common.h"
 #include "tcg/tcg-op.h"
+#include "tcg/tcg-temp-internal.h"
 #include "tcg/tcg.h"
 
 // CPU registers
@@ -54,6 +55,141 @@ static void gen_goto_tb(DisasContext* ctx, int n, target_ulong dest) {
         tcg_gen_lookup_and_goto_ptr();
     }
     ctx->base.is_jmp = DISAS_CHAIN;
+}
+
+// Some Macros for generating code
+#define _IF_COND_LABEL(label)                                                                                          \
+    TCGLabel* label##_label_if = gen_new_label();                                                                      \
+    TCGLabel* label##_label_else = gen_new_label();                                                                    \
+    TCGLabel* label##_endif = gen_new_label();
+
+#define IF_CONDi(label, cond, val1, val2)                                                                              \
+    _IF_COND_LABEL(label)                                                                                              \
+    tcg_gen_brcondi_i32(cond, val1, val2, label##_label_if);                                                           \
+    tcg_gen_br(label##_label_else);                                                                                    \
+    gen_set_label(label##_label_if);
+
+#define IF_COND(label, cond, val1, val2)                                                                               \
+    _IF_COND_LABEL(label)                                                                                              \
+    tcg_gen_brcond_i32(cond, val1, val2, label##_label_if);                                                            \
+    tcg_gen_br(label##_label_else);                                                                                    \
+    gen_set_label(label##_label_if);
+
+#define ELSE(label)                                                                                                    \
+    tcg_gen_br(label##_endif);                                                                                         \
+    gen_set_label(label##_label_else);
+
+#define ENDIF(label) gen_set_label(label##_endif);
+
+// flag options
+#define clear_c_flag tcg_gen_movi_i32(cpu_sr[C_FLAG], 0)
+
+inline static void gen_set_z_flag(TCGv_i32 val) { tcg_gen_setcondi_i32(TCG_COND_EQ, cpu_sr[Z_FLAG], val, 0); }
+
+inline static void gen_set_n_flag(TCGv_i32 val) {
+    // if bit 31 of val is 1, set N flag
+    TCGv_i32 tmp = tcg_temp_new_i32();
+    tcg_gen_andi_i32(tmp, val, 0x80000000);
+    tcg_gen_shri_i32(tmp, tmp, 31);
+    tcg_gen_mov_i32(cpu_sr[N_FLAG], tmp);
+    tcg_temp_free_i32(tmp);
+}
+
+// NOTE: place this before `watch_for_overflow`, as sometimes `watch_for_overflow` will saturate the value!
+inline static void watch_for_carry(TCGv_i32 dst, TCGv_i32 val1) {
+    tcg_gen_setcond_i32(TCG_COND_LT, cpu_sr[C_FLAG], dst, val1);
+}
+
+#define OP_ADD_I32 0
+#define OP_SUB_I32 1
+inline static void watch_for_overflow(TCGv_i32 ret, TCGv_i32 val1, TCGv_i32 val2, int32_t add) {
+    // A = sgn(val1), B = sgn(val2), C = sgn(ret), D = add
+    // + : 0, - : 1, add : 0, sub : 1
+    // underflow = (A & B & ~C & ~D) | (A & ~B & ~C & D)
+    // overflow = (~A & ~B & ~C & ~D) | (~A & B & C & D)
+    // reduce to:
+    // underflow = (A & ~C) & (B ^ D)
+    // overflow = (~A & C) & ~(B ^ D)
+    TCGv_i32 sgn1 = tcg_temp_new_i32();       // sign of val1
+    TCGv_i32 sgn2 = tcg_temp_new_i32();       // sign of val2
+    TCGv_i32 sgn_ret = tcg_temp_new_i32();    // sign of ret
+    TCGv_i32 sgn_add = tcg_temp_new_i32();    // add or sub
+
+    tcg_gen_shri_i32(sgn1, val1, 31);
+    tcg_gen_shri_i32(sgn2, val2, 31);
+    tcg_gen_shri_i32(sgn_ret, ret, 31);
+
+    tcg_gen_movi_i32(sgn_add, add);
+
+    TCGv_i32 b_xor_d = tcg_temp_new_i32();
+    TCGv_i32 b_xnor_d = tcg_temp_new_i32();
+    TCGv_i32 not_a = tcg_temp_new_i32();
+    TCGv_i32 not_c = tcg_temp_new_i32();
+
+    TCGv_i32 overflow = tcg_temp_new_i32();
+    TCGv_i32 underflow = tcg_temp_new_i32();
+    tcg_gen_xor_i32(b_xor_d, sgn2, sgn_add);
+    tcg_gen_not_i32(b_xnor_d, b_xor_d);
+    tcg_gen_xori_i32(not_a, sgn1, 1);
+    tcg_gen_xori_i32(not_c, sgn_ret, 1);
+    tcg_gen_and_i32(underflow, sgn1, not_c);
+    tcg_gen_and_i32(underflow, underflow, b_xor_d);
+    tcg_gen_and_i32(overflow, not_a, sgn_ret);
+    tcg_gen_and_i32(overflow, overflow, b_xnor_d);
+
+    // clear V flag
+    tcg_gen_movi_i32(cpu_sr[V_FLAG], 0);
+
+    IF_CONDi(ovm_set, TCG_COND_EQ, cpu_sr[OVM_FLAG], 1)
+
+    // if OVM = 1, then OVC counter is not affected by this operation
+    // but target value will saturate to 0x7FFFFFFF or 0x80000000 when overflow
+    IF_CONDi(ovm_set_and_overflow, TCG_COND_NE, overflow, 0)
+    // overflow
+    tcg_gen_movi_i32(cpu_sr[V_FLAG], 1);
+    tcg_gen_movi_i32(cpu_r[C28X_REG_ACC], 0x7FFFFFFF);
+    ELSE(ovm_set_and_overflow)
+    // no overflow, just ignore this
+    ENDIF(ovm_set_and_overflow)
+
+    IF_CONDi(ovm_set_and_underflow, TCG_COND_NE, underflow, 0)
+    // underflow
+    tcg_gen_movi_i32(cpu_sr[V_FLAG], 1);
+    tcg_gen_movi_i32(cpu_r[C28X_REG_ACC], 0x80000000);
+    ELSE(ovm_set_and_underflow)
+    // no underflow, just ignore this
+    ENDIF(ovm_set_and_underflow)
+
+    ELSE(ovm_set)
+
+    // if OVM = 0, if operation generates a positive overflow, then OVC counter is incremented
+    IF_CONDi(ovm_not_set_and_overflow, TCG_COND_NE, overflow, 0)
+    // overflow
+    tcg_gen_movi_i32(cpu_sr[V_FLAG], 1);
+    tcg_gen_addi_i32(cpu_sr[OVC_FLAG], cpu_sr[OVC_FLAG], 1);
+    ELSE(ovm_not_set_and_overflow)
+    // no overflow, just ignore this
+    ENDIF(ovm_not_set_and_overflow)
+
+    // if OVM = 0, if operation generates a negative overflow, then OVC counter is decremented
+    IF_CONDi(ovm_not_set_and_underflow, TCG_COND_NE, underflow, 0)
+    // underflow
+    tcg_gen_movi_i32(cpu_sr[V_FLAG], 1);
+    tcg_gen_subi_i32(cpu_sr[OVC_FLAG], cpu_sr[OVC_FLAG], 1);
+    ELSE(ovm_not_set_and_underflow)
+    // no underflow, just ignore this
+    ENDIF(ovm_not_set_and_underflow)
+
+    ENDIF(ovm_set)
+
+    tcg_temp_free_i32(sgn1);
+    tcg_temp_free_i32(sgn2);
+    tcg_temp_free_i32(sgn_ret);
+    tcg_temp_free_i32(sgn_add);
+    tcg_temp_free_i32(b_xor_d);
+    tcg_temp_free_i32(b_xnor_d);
+    tcg_temp_free_i32(not_a);
+    tcg_temp_free_i32(not_c);
 }
 
 static bool decode_insn(DisasContext* ctx, uint32_t insn);
@@ -105,14 +241,21 @@ static bool trans_ABS_acc(DisasContext* ctx, arg_ABS_acc* a) {
     tcg_gen_movi_i32(cpu_sr[Z_FLAG], 1);
     gen_set_label(label_z_flag_not_set);
     // C is cleared
-    tcg_gen_movi_i32(cpu_sr[C_FLAG], 0);
+    clear_c_flag;
+
+    tcg_temp_free_i32(tmp);
     return true;
 }
 
 static bool trans_ABSTC_acc(DisasContext* ctx, arg_ABSTC_acc* a) {
-    trans_ABS_acc(ctx, (arg_ABS_acc*)a);
-    // TC = TC ^ 1
+    // if acc < 0, then xor tc with 1
+    TCGLabel* label_acc_not_neg = gen_new_label();
+    tcg_gen_brcondi_i32(TCG_COND_GE, cpu_r[C28X_REG_ACC], 0, label_acc_not_neg);
     tcg_gen_xori_i32(cpu_sr[TC_FLAG], cpu_sr[TC_FLAG], 1);
+
+    // behavior like ABS
+    gen_set_label(label_acc_not_neg);
+    trans_ABS_acc(ctx, (arg_ABS_acc*)a);
     return true;
 }
 
@@ -131,6 +274,7 @@ static bool trans_LB_xar7(DisasContext* ctx, arg_LB_xar7* a) {
     tcg_gen_mov_tl(cpu_r[C28X_REG_PC], baddr);
     ctx->base.is_jmp = DISAS_LOOKUP;
 
+    tcg_temp_free_i32(baddr);
     return true;
 }
 
@@ -147,6 +291,37 @@ static bool trans_LB_xar7(DisasContext* ctx, arg_LB_xar7* a) {
 // ==============================================
 
 // ** insert code here **
+static bool trans_ADD_acc_imm16_shft(DisasContext* ctx, arg_ADD_acc_imm16_shft* a) {
+    TCGv_i32 tmp = tcg_temp_new_i32();
+    TCGv_i32 tmp_acc = tcg_temp_new_i32();
+    // if SXM = 1
+    IF_CONDi(sxm_set, TCG_COND_NE, cpu_sr[SXM_FLAG], 1)
+
+    //   ACC = ACC + S : 16bit << shift value
+    tcg_gen_movi_i32(tmp, a->imm16);
+    tcg_gen_ext16s_i32(tmp, tmp);
+    tcg_gen_shli_i32(tmp, tmp, a->shft);
+
+    ELSE(sxm_set)
+    //   ACC = ACC + 0 : 16bit << shift value
+    tcg_gen_movi_i32(tmp, a->imm16);
+    tcg_gen_shli_i32(tmp, tmp, a->shft);
+
+    ENDIF(sxm_set)
+
+    tcg_gen_mov_i32(tmp_acc, cpu_r[C28X_REG_ACC]);
+
+    tcg_gen_add_i32(cpu_r[C28X_REG_ACC], tmp_acc, tmp);
+    watch_for_carry(cpu_r[C28X_REG_ACC], tmp);
+    watch_for_overflow(cpu_r[C28X_REG_ACC], tmp_acc, tmp, OP_ADD_I32);
+
+    tcg_temp_free_i32(tmp);
+    tcg_temp_free_i32(tmp_acc);
+
+    gen_set_z_flag(cpu_r[C28X_REG_ACC]);
+    gen_set_n_flag(cpu_r[C28X_REG_ACC]);
+    return true;
+}
 
 static bool trans_MOVL_xar0_imm22(DisasContext* ctx, arg_MOVL_xar0_imm22* a) {
     // No flags and modes
@@ -228,6 +403,7 @@ static void c28x_tr_translate_insn(DisasContextBase* dcbase, CPUState* cs) {
 static bool c28x_tr_disas_log(const DisasContextBase* dcbase, CPUState* cs, FILE* log_file) {
     // FIXME: Remove this when everything is done!
     fprintf(log_file, "[C28X-TCG] pc: 0x%lx\n", dcbase->pc_first);
+    fprintf(log_file, "IN: %s\n", lookup_symbol(dcbase->pc_first));
     target_disas(log_file, cs, dcbase);
     return true;
 }

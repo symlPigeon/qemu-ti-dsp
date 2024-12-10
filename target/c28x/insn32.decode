@@ -1,7 +1,10 @@
-&imm22          imm22
+&imm22                  imm22
+&shft_imm16             shft imm16
 
 
-@op_imm22       .... .... .. imm22:22                               &imm22
+@op_MOVL_xar0_imm22     .... .... .. imm22:22                               &imm22
+@op_ADD_acc             .... .... .... shft:4 imm16:16                      &shft_imm16
 
 
-MOVL_xar0_imm22 1000 1101 00.. .... .... .... .... ....             @op_imm22
+ADD_acc_imm16_shft      1111 1111 0001 .... .... .... .... ....             @op_ADD_acc
+MOVL_xar0_imm22         1000 1101 00.. .... .... .... .... ....             @op_MOVL_xar0_imm22
