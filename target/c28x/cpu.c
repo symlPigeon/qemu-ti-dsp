@@ -110,6 +110,7 @@ static void c28x_cpu_dump_state(CPUState* cs, FILE* f, int flags) {
     // use env to access emu regs
     CPUC28XState* env = &cpu->env;
 
+    qemu_fprintf(f, "================== CPU  Registers ==================\n");
     qemu_fprintf(f, "PC:    " TARGET_FMT_lx "\n", env->r[C28X_REG_PC]);
     qemu_fprintf(f, "RPC:   " TARGET_FMT_lx "\n", env->r[C28X_REG_RPC]);
     qemu_fprintf(f, "DP:   " TARGET_FMT_lx "\n", env->r[C28X_REG_DP]);
@@ -120,10 +121,42 @@ static void c28x_cpu_dump_state(CPUState* cs, FILE* f, int flags) {
     qemu_fprintf(f, "IFR:   " TARGET_FMT_lx "\n", env->r[C28X_REG_IFR]);
     qemu_fprintf(f, "IER:   " TARGET_FMT_lx "\n", env->r[C28X_REG_IER]);
     qemu_fprintf(f, "DBGIER:" TARGET_FMT_lx "\n", env->r[C28X_REG_DBGIER]);
+    qemu_fprintf(f, "================= CPU Status Flags =================\n");
+    qemu_fprintf(f, "OVC:   " TARGET_FMT_ld "\n", env->sr[OVC_FLAG]);
+    qemu_fprintf(f, "PM:    " TARGET_FMT_ld "\n", env->sr[PM_FLAG]);
+#define FLAG_PRINT(flag) qemu_fprintf(f, "%s", env->sr[flag] != 0 ? c28x_cpu_sr_names[flag] : "")
+    qemu_fprintf(f, "flags: ");
+    FLAG_PRINT(V_FLAG);
+    FLAG_PRINT(N_FLAG);
+    FLAG_PRINT(Z_FLAG);
+    FLAG_PRINT(C_FLAG);
+    FLAG_PRINT(TC_FLAG);
+    qemu_fprintf(f, "\n");
+    qemu_fprintf(f, "OVM: %s\n", env->sr[OVM_FLAG] != 0 ? "Set" : "Clear");
+    qemu_fprintf(f, "SXM: %s\n", env->sr[SXM_FLAG] != 0 ? "Set" : "Clear");
+    qemu_fprintf(f, "ARP --> XAR%d\n", env->sr[ARP_FLAG]);
+    qemu_fprintf(f, "XF: %s\n", env->sr[XF_FLAG] != 0 ? "Set" : "Clear");
+    qemu_fprintf(f, "MOM1MAP: %s\n", env->sr[MOM1MAP_FLAG] != 0 ? "Set" : "Clear");
+    qemu_fprintf(f, "OBJMODE: %s\n", env->sr[OBJMODE_FLAG] != 0 ? "C28x Obj" : "C27x Obj");
+    qemu_fprintf(f, "AMODE: %s\n", env->sr[AMODE_FLAG] != 0 ? "1" : "0");
+    qemu_fprintf(f, "IDLESTAT: %s\n", env->sr[IDLESTAT_FLAG] != 0 ? "Idle" : "Active");
+    qemu_fprintf(f, "EALLOW: %s\n", env->sr[EALLOW_FLAG] != 0 ? "Set" : "Clear");
+    qemu_fprintf(f, "LOOP: %s\n", env->sr[LOOP_FLAG] != 0 ? "Set" : "Clear");
+    qemu_fprintf(f, "SPA: %s\n", env->sr[SPA_FLAG] != 0 ? "Aligned" : "Not aligned");
+    qemu_fprintf(f, "VMAP: %s\n", env->sr[VMAP_FLAG] != 0 ? "Top" : "Bottom");
+    qemu_fprintf(f, "PAGE0: %s\n",
+                 env->sr[PAGE0_FLAG] != 0 ? "PAGE0 stack addressing Mode" : "PAGE0 direct addressing Mode");
+    qemu_fprintf(f, env->sr[AMODE_FLAG] != 0 && env->sr[PAGE0_FLAG] != 0 ? "ILLEGAL INSTRUCTION TRAP! PAGE0=AMODE=1\n"
+                                                                         : "");
+    qemu_fprintf(f, "DBGM: %s\n", env->sr[DBGM_FLAG] != 0 ? "Debug event disabled" : "Debug event enabled");
+    qemu_fprintf(f, "INTM: %s\n",
+                 env->sr[INTM_FLAG] != 0 ? "Maskable interrupts disabled" : "Maskable interrupts enabled");
+    qemu_fprintf(f, "================ Auxilary Registers ================\n");
 
     for (int i = 0; i <= 7; i++) {
         qemu_fprintf(f, "XAR%d:  " TARGET_FMT_lx "\n", i, env->r[C28X_REG_XAR0 + i]);
     }
+    qemu_fprintf(f, "====================================================\n");
 
     qemu_fprintf(f, "\n");
 }
