@@ -31,7 +31,8 @@ static bool decode_insn(DisasContext* ctx, uint32_t insn);
 
 INSN(ABS_acc, ABS, "ACC")
 INSN(ABSTC_acc, ABSTC, "ACC")
-INSN(ADD_acc_imm16_shft, "ADD", "ACC, #%d << #%d", a->imm16, a->shft)
+INSN(ADD_acc_imm16_shft, ADD, "ACC, #%d << #%d", a->imm16, a->shft)
+INSN(ADD_acc_loc16_t, ADD, "ADD ACC, %02x << T", a->loc16)
 INSN(ADDB_xarn_7bit, ADDB, "%s, %d", XARn(a->xarn), a->imm7)
-INSN(LB_xar7, LB, "")
-INSN(MOVL_xar0_imm22, MOVL, "%d", a->imm22)
+INSN(MOV_acc_loc16_t, MOV, "MOV ACC, %02x << T", a->loc16)
+INSN(LB_xar7, LB, "") INSN(MOVL_xar0_imm22, MOVL, "%d", a->imm22)

@@ -1,5 +1,6 @@
 #include "qemu/osdep.h"
 
+#include "address-mode.h"
 #include "cpu.h"
 #include "exec/address-spaces.h"
 #include "exec/cpu_ldst.h"
@@ -192,6 +193,12 @@ inline static void watch_for_overflow(TCGv_i32 ret, TCGv_i32 val1, TCGv_i32 val2
     tcg_temp_free_i32(not_c);
 }
 
+// C28x address mode
+#define C28X_READ_LOC16(loc, reg)  C28X_RESOLVE_LOC(loc, reg, cpu_r, cpu_sr, C28X_MEM_ACCESS_READ, C28X_LOC_16)
+#define C28X_READ_LOC32(loc, reg)  C28X_RESOLVE_LOC(loc, reg, cpu_r, cpu_sr, C28X_MEM_ACCESS_READ, C28X_LOC_32)
+#define C28X_WRITE_LOC16(loc, reg) C28X_RESOLVE_LOC(loc, reg, cpu_r, cpu_sr, C28X_MEM_ACCESS_WRITE, C28X_LOC_16)
+#define C28X_WRITE_LOC32(loc, reg) C28X_RESOLVE_LOC(loc, reg, cpu_r, cpu_sr, C28X_MEM_ACCESS_WRITE, C28X_LOC_32)
+
 static bool decode_insn(DisasContext* ctx, uint32_t insn);
 #include "decode-insn16.c.inc"
 
@@ -327,6 +334,55 @@ static bool trans_MOVL_xar0_imm22(DisasContext* ctx, arg_MOVL_xar0_imm22* a) {
     // No flags and modes
     tcg_gen_movi_tl(cpu_r[C28X_REG_XAR0], a->imm22);
 
+    return true;
+}
+
+static bool trans_ADD_acc_loc16_t(DisasContext* ctx, arg_ADD_acc_loc16_t* a) {
+    TCGv target_value = tcg_temp_new_i32();
+    C28X_READ_LOC16(a->loc16, target_value);
+    TCGv t = tcg_temp_new_i32();
+    tcg_gen_shri_tl(t, cpu_r[C28X_REG_XT], 16);
+
+    IF_CONDi(use_sxm, TCG_COND_EQ, cpu_sr[SXM_FLAG], 1)
+    tcg_gen_ext32s_tl(target_value, target_value);
+    ELSE(use_sxm)
+    // no need to sign extend
+    ENDIF(use_sxm)
+
+    tcg_gen_shl_tl(target_value, target_value, t);
+
+    TCGv temp_acc = tcg_temp_new_i32();
+    tcg_gen_mov_i32(temp_acc, cpu_r[C28X_REG_ACC]);
+    tcg_gen_add_tl(cpu_r[C28X_REG_ACC], temp_acc, target_value);
+
+    watch_for_carry(cpu_r[C28X_REG_ACC], temp_acc);
+    watch_for_overflow(cpu_r[C28X_REG_ACC], temp_acc, target_value, OP_ADD_I32);
+
+    gen_set_z_flag(cpu_r[C28X_REG_ACC]);
+    gen_set_n_flag(cpu_r[C28X_REG_ACC]);
+
+    tcg_temp_free_i32(temp_acc);
+    tcg_temp_free_i32(target_value);
+    tcg_temp_free_i32(t);
+    return true;
+}
+
+static bool trans_MOV_acc_loc16_t(DisasContext* ctx, arg_MOV_acc_loc16_t* a) {
+    TCGv target_value = tcg_temp_new_i32();
+    C28X_READ_LOC16(a->loc16, target_value);
+
+    IF_CONDi(use_sxm, TCG_COND_EQ, cpu_sr[SXM_FLAG], 1)
+    tcg_gen_ext32s_tl(target_value, target_value);
+    ELSE(use_sxm)
+    // no need to sign extend
+    ENDIF(use_sxm)
+
+    tcg_gen_mov_i32(cpu_r[C28X_REG_ACC], target_value);
+
+    gen_set_z_flag(cpu_r[C28X_REG_ACC]);
+    gen_set_n_flag(cpu_r[C28X_REG_ACC]);
+
+    tcg_temp_free_i32(target_value);
     return true;
 }
 
