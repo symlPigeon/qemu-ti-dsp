@@ -167,7 +167,7 @@ static void c28x_cpu_set_pc(CPUState* cs, vaddr value) {
     CPUC28XState* env = &cpu->env;
 
     env->r[C28X_REG_PC] = value;
-    printf("[C28X-CPU] Set PC to " TARGET_FMT_lx "\n", value);
+    printf("[C28X-CPU] Set PC to " TARGET_FMT_lx "\n", (unsigned int)value);
 }
 
 static bool c28x_cpu_exec_interrupt(CPUState* cs, int interrupt_request) {

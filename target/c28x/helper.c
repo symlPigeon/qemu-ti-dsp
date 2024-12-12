@@ -15,7 +15,7 @@ static inline G_NORETURN void raise_exception(CPUC28XState* env, int index, uint
     cpu_loop_exit_restore(cs, retaddr);
 }
 
-void helper_info_raise_illegal_instruction(CPUC28XState* env) {
+void helper_raise_illegal_instruction(CPUC28XState* env) {
     CPUState* cs = env_cpu(env);
 
     cs->exception_index = EXCP_DEBUG;

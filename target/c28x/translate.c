@@ -2,18 +2,20 @@
 
 #include "address-mode.h"
 #include "cpu.h"
-#include "exec/address-spaces.h"
+#include "disas/disas.h"
 #include "exec/cpu_ldst.h"
 #include "exec/helper-gen.h"
-#include "exec/log.h"
-#include "exec/translation-block.h"
+#include "exec/helper-proto.h"
 #include "exec/translator.h"
-#include "hw/core/tcg-cpu-ops.h"
 #include "stdlib.h"
 #include "tcg/tcg-op-common.h"
 #include "tcg/tcg-op.h"
 #include "tcg/tcg-temp-internal.h"
 #include "tcg/tcg.h"
+
+#define HELPER_H "helper.h"
+#include "exec/helper-info.c.inc"
+#undef HELPER_H
 
 // CPU registers
 static TCGv cpu_r[C28X_REG_PAGE_SIZE];

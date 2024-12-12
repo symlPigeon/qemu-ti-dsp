@@ -7,7 +7,7 @@ This repository is trying to implement TI C2000 DSP in QEMU.
 ```bash
 mkdir build
 cd build
-CFLAGS=-Wno-error ../configure --target-list=c28x-softmmu
+../configure --target-list=c28x-softmmu
 ```
 
 For now, add `-Wno-error` to `CFLAGS` to avoid errors from unfinished implementation.
