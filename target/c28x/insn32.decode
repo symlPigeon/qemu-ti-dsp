@@ -1,14 +1,16 @@
 &imm22                  imm22
 &shft_imm16             shft imm16
-&loc16                  loc16
+&loc16                  loc16 !extern
 &loc32                  loc32
+&shft_loc16             shft loc16                   
 
 @op_MOVL_xar0_imm22     .... .... .. imm22:22                               &imm22
 @op_ADD_acc             .... .... .... shft:4 imm16:16                      &shft_imm16
-@op_ADD_acc_loc16       .... .... .... .... .... .... loc16:8               &loc16
-@op_MOV_acc_loc16       .... .... .... .... .... .... loc16:8               &loc16
+@op_acc_loc16       .... .... .... .... .... .... loc16:8                   &loc16
+@op_ADD_acc_loc16_shft  .... .... .... .... .... shft:4 loc16:8             &shft_loc16
 
 ADD_acc_imm16_shft      1111 1111 0001 .... .... .... .... ....             @op_ADD_acc
-ADD_acc_loc16_t         0101 0110 0010 0011 0000 0000 .... ....             @op_ADD_acc_loc16
-MOV_acc_loc16_t         0101 0110 0000 0110 0000 0000 .... ....             @op_MOV_acc_loc16
+ADD_acc_loc16_t         0101 0110 0010 0011 0000 0000 .... ....             @op_acc_loc16
+ADD_acc_loc16_shft      0101 0110 0000 0100 0000 .... .... ....             @op_ADD_acc_loc16_shft
+MOV_acc_loc16_t         0101 0110 0000 0110 0000 0000 .... ....             @op_acc_loc16
 MOVL_xar0_imm22         1000 1101 00.. .... .... .... .... ....             @op_MOVL_xar0_imm22

@@ -1,8 +1,15 @@
-&xarn_imm7          xarn imm7
+&xarn_imm7           xarn imm7
+&loc16               loc16
+&ax_loc16            ax loc16
 
-@op_xarn_imm7       .... . xarn:3 . imm7:7                        &xarn_imm7
+@op_ADDB_xarn_imm7   .... . xarn:3 . imm7:7                        &xarn_imm7
+@op_loc16            .... .... loc16:8                             &loc16
+@op_ax_loc16         .... ... ax:1 loc16:8                          &ax_loc16
 
 ABS_acc              1111 1111 0101 0110
 ABSTC_acc            0101 0110 0101 1111
-ADDB_xarn_7bit       1101 1... 0... ....                         @op_xarn_imm7
+ADD_acc_loc16        1000 0001 .... ....                           @op_loc16
+ADD_acc_loc16_shl16  0000 0101 .... ....                           @op_loc16
+ADD_ax_loc16         1001 010. .... ....                           @op_ax_loc16
+ADDB_xarn_7bit       1101 1... 0... ....                           @op_ADDB_xarn_imm7
 LB_xar7              0111 0110 0010 0000

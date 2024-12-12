@@ -201,7 +201,30 @@ inline static void watch_for_overflow(TCGv_i32 ret, TCGv_i32 val1, TCGv_i32 val2
 #define C28X_WRITE_LOC16(loc, reg) C28X_RESOLVE_LOC(loc, reg, cpu_r, cpu_sr, C28X_MEM_ACCESS_WRITE, C28X_LOC_16)
 #define C28X_WRITE_LOC32(loc, reg) C28X_RESOLVE_LOC(loc, reg, cpu_r, cpu_sr, C28X_MEM_ACCESS_WRITE, C28X_LOC_32)
 
-//
+// Sign extend value
+#define SXM_EXTEND(val)                                                                                                \
+    IF_CONDi(sxm_set, TCG_COND_NE, cpu_sr[SXM_FLAG], 1)                                                                \
+    tcg_gen_ext32s_tl(val, val);                                                                                       \
+    ELSE(sxm_set)                                                                                                      \
+    ENDIF(sxm_set)
+
+// ADD to ACC with value and shift
+#define _INTERNAL_ADD_TO_ACC_WITH_FLAGS(value, shift)                                                                  \
+    tcg_gen_shl_tl(value, value, shift);                                                                               \
+    TCGv _macro_internal_temp_acc = tcg_temp_new_i32();                                                                \
+    tcg_gen_mov_tl(_macro_internal_temp_acc, cpu_r[C28X_REG_ACC]);                                                     \
+    tcg_gen_add_tl(cpu_r[C28X_REG_ACC], _macro_internal_temp_acc, value);                                              \
+    watch_for_carry(cpu_r[C28X_REG_ACC], _macro_internal_temp_acc);                                                    \
+    watch_for_overflow(cpu_r[C28X_REG_ACC], _macro_internal_temp_acc, value, OP_ADD_I32);                              \
+    gen_set_z_flag(cpu_r[C28X_REG_ACC]);                                                                               \
+    gen_set_n_flag(cpu_r[C28X_REG_ACC]);                                                                               \
+    tcg_temp_free_i32(_macro_internal_temp_acc);
+
+#define ADD_TO_ACC_WITH_FLAGS(value, shift)                                                                            \
+    TCGv _macro_arg_value = tcg_temp_new_i32();                                                                        \
+    SXM_EXTEND(_macro_arg_value);                                                                                      \
+    _INTERNAL_ADD_TO_ACC_WITH_FLAGS(_macro_arg_value, shift);                                                          \
+    tcg_temp_free_i32(_macro_arg_value);
 
 #include "decode-insn16.c.inc"
 
@@ -269,6 +292,81 @@ static bool trans_ABSTC_acc(DisasContext* ctx, arg_ABSTC_acc* a) {
     return true;
 }
 
+static bool trans_ADD_acc_loc16(DisasContext* ctx, arg_ADD_acc_loc16* a) {
+    TCGv target_value = tcg_temp_new_i32();
+    C28X_READ_LOC16(a->loc16, target_value);
+    TCGv shft = tcg_constant_i32(0);
+
+    ADD_TO_ACC_WITH_FLAGS(target_value, shft)
+
+    return true;
+}
+
+static bool trans_ADD_acc_loc16_shl16(DisasContext* ctx, arg_ADD_acc_loc16_shl16* a) {
+    TCGv target_value = tcg_temp_new_i32();
+    C28X_READ_LOC16(a->loc16, target_value);
+    TCGv shft = tcg_constant_i32(16);
+
+    ADD_TO_ACC_WITH_FLAGS(target_value, shft)
+
+    return true;
+}
+
+static bool trans_ADD_ax_loc16(DisasContext* ctx, arg_ADD_ax_loc16* a) {
+    TCGv target_value = tcg_temp_new_i32();
+    C28X_READ_LOC16(a->loc16, target_value);
+
+    TCGv adder_1 = tcg_temp_new_i32();
+    TCGv adder_2 = tcg_temp_new_i32();
+    TCGv add_sum = tcg_temp_new_i32();
+    tcg_gen_mov_tl(adder_1, target_value);
+
+    if (a->ax == 1) {
+        // AH
+        tcg_gen_shri_tl(adder_2, cpu_r[C28X_REG_ACC], 16);
+        tcg_gen_shli_tl(target_value, target_value, 16);
+        tcg_gen_add_tl(cpu_r[C28X_REG_ACC], cpu_r[C28X_REG_ACC], target_value);
+    } else {
+        // AL
+        tcg_gen_andi_tl(adder_2, cpu_r[C28X_REG_ACC], 0xffff);
+        // Not sure if this add will affect AH
+        // assume not
+        TCGv temp = tcg_temp_new_i32();
+        tcg_gen_add_tl(temp, cpu_r[C28X_REG_ACC], target_value);
+        tcg_gen_andi_tl(temp, temp, 0x0000ffff);
+        tcg_gen_andi_tl(cpu_r[C28X_REG_ACC], cpu_r[C28X_REG_ACC], 0xffff0000);
+        tcg_gen_or_tl(cpu_r[C28X_REG_ACC], cpu_r[C28X_REG_ACC], temp);
+        tcg_temp_free_i32(temp);
+    }
+
+    // calculate the actual sum of AX
+    tcg_gen_add_tl(add_sum, adder_1, adder_2);
+    // set Z flag when sum is zero (Z flag)
+    tcg_gen_setcondi_tl(TCG_COND_EQ, cpu_sr[Z_FLAG], add_sum, 0);
+    // fetch the sign bit of sum
+    TCGv neg_flag = tcg_temp_new_i32();
+    tcg_gen_shri_tl(neg_flag, add_sum, 15);
+    tcg_gen_andi_tl(cpu_sr[N_FLAG], neg_flag, 1);
+
+    // set C flag, that is 16th bit, higher bit should be 0
+    tcg_gen_shri_tl(cpu_sr[C_FLAG], add_sum, 16);
+
+    // check overflow, first, adder_1 and adder_2 share the same sign (XNOR)
+    tcg_gen_shri_tl(adder_1, adder_1, 15);
+    tcg_gen_shri_tl(adder_2, adder_2, 15);
+    TCGv overflow_1 = tcg_temp_new_i32();
+    tcg_gen_xor_tl(overflow_1, adder_1, adder_2);
+    tcg_gen_not_tl(overflow_1, overflow_1);
+    // next, sum and adder_1 sign is different (XOR)
+    tcg_gen_shri_tl(add_sum, add_sum, 15);
+    TCGv overflow_2 = tcg_temp_new_i32();
+    tcg_gen_xor_tl(overflow_2, add_sum, adder_1);
+    // if both conditions are met, then overflow (V Flag)
+    tcg_gen_and_tl(cpu_sr[V_FLAG], overflow_1, overflow_2);
+
+    return true;
+}
+
 static bool trans_ADDB_xarn_7bit(DisasContext* ctx, arg_ADDB_xarn_7bit* a) {
     // No flags and modes
     tcg_gen_addi_tl(cpu_r[a->xarn + C28X_REG_XAR0], cpu_r[a->xarn + C28X_REG_XAR0], a->imm7);
@@ -302,34 +400,13 @@ static bool trans_LB_xar7(DisasContext* ctx, arg_LB_xar7* a) {
 
 // ** insert code here **
 static bool trans_ADD_acc_imm16_shft(DisasContext* ctx, arg_ADD_acc_imm16_shft* a) {
-    TCGv_i32 tmp = tcg_temp_new_i32();
-    TCGv_i32 tmp_acc = tcg_temp_new_i32();
-    // if SXM = 1
-    IF_CONDi(sxm_set, TCG_COND_NE, cpu_sr[SXM_FLAG], 1)
+    TCGv imm16 = tcg_temp_new_i32();
+    TCGv shift = tcg_temp_new_i32();
+    tcg_gen_movi_i32(imm16, a->imm16);
+    tcg_gen_movi_i32(shift, a->shft);
 
-    //   ACC = ACC + S : 16bit << shift value
-    tcg_gen_movi_i32(tmp, a->imm16);
-    tcg_gen_ext16s_i32(tmp, tmp);
-    tcg_gen_shli_i32(tmp, tmp, a->shft);
+    ADD_TO_ACC_WITH_FLAGS(imm16, shift)
 
-    ELSE(sxm_set)
-    //   ACC = ACC + 0 : 16bit << shift value
-    tcg_gen_movi_i32(tmp, a->imm16);
-    tcg_gen_shli_i32(tmp, tmp, a->shft);
-
-    ENDIF(sxm_set)
-
-    tcg_gen_mov_i32(tmp_acc, cpu_r[C28X_REG_ACC]);
-
-    tcg_gen_add_i32(cpu_r[C28X_REG_ACC], tmp_acc, tmp);
-    watch_for_carry(cpu_r[C28X_REG_ACC], tmp);
-    watch_for_overflow(cpu_r[C28X_REG_ACC], tmp_acc, tmp, OP_ADD_I32);
-
-    tcg_temp_free_i32(tmp);
-    tcg_temp_free_i32(tmp_acc);
-
-    gen_set_z_flag(cpu_r[C28X_REG_ACC]);
-    gen_set_n_flag(cpu_r[C28X_REG_ACC]);
     return true;
 }
 
@@ -346,27 +423,18 @@ static bool trans_ADD_acc_loc16_t(DisasContext* ctx, arg_ADD_acc_loc16_t* a) {
     TCGv t = tcg_temp_new_i32();
     tcg_gen_shri_tl(t, cpu_r[C28X_REG_XT], 16);
 
-    IF_CONDi(use_sxm, TCG_COND_EQ, cpu_sr[SXM_FLAG], 1)
-    tcg_gen_ext32s_tl(target_value, target_value);
-    ELSE(use_sxm)
-    // no need to sign extend
-    ENDIF(use_sxm)
+    ADD_TO_ACC_WITH_FLAGS(target_value, t)
 
-    tcg_gen_shl_tl(target_value, target_value, t);
+    return true;
+}
 
-    TCGv temp_acc = tcg_temp_new_i32();
-    tcg_gen_mov_i32(temp_acc, cpu_r[C28X_REG_ACC]);
-    tcg_gen_add_tl(cpu_r[C28X_REG_ACC], temp_acc, target_value);
+static bool trans_ADD_acc_loc16_shft(DisasContext* ctx, arg_ADD_acc_loc16_shft* a) {
+    TCGv target_value = tcg_temp_new_i32();
+    C28X_READ_LOC16(a->loc16, target_value);
+    TCGv shift = tcg_constant_i32(a->shft);
 
-    watch_for_carry(cpu_r[C28X_REG_ACC], temp_acc);
-    watch_for_overflow(cpu_r[C28X_REG_ACC], temp_acc, target_value, OP_ADD_I32);
+    ADD_TO_ACC_WITH_FLAGS(target_value, shift)
 
-    gen_set_z_flag(cpu_r[C28X_REG_ACC]);
-    gen_set_n_flag(cpu_r[C28X_REG_ACC]);
-
-    tcg_temp_free_i32(temp_acc);
-    tcg_temp_free_i32(target_value);
-    tcg_temp_free_i32(t);
     return true;
 }
 
@@ -374,11 +442,7 @@ static bool trans_MOV_acc_loc16_t(DisasContext* ctx, arg_MOV_acc_loc16_t* a) {
     TCGv target_value = tcg_temp_new_i32();
     C28X_READ_LOC16(a->loc16, target_value);
 
-    IF_CONDi(use_sxm, TCG_COND_EQ, cpu_sr[SXM_FLAG], 1)
-    tcg_gen_ext32s_tl(target_value, target_value);
-    ELSE(use_sxm)
-    // no need to sign extend
-    ENDIF(use_sxm)
+    SXM_EXTEND(target_value)
 
     tcg_gen_mov_i32(cpu_r[C28X_REG_ACC], target_value);
 
