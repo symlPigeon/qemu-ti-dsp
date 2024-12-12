@@ -21,6 +21,7 @@ static int c28x_cpu_mmu_index(CPUState* cs, bool ifetch) { return ifetch ? MMU_C
 static void c28x_cpu_disas_set_info(CPUState* cpu, disassemble_info* info) {
     printf("[C28X-DISAS] c28x_cpu_disas_set_info\n");
     info->mach = bfd_arch_c28x;
+    info->print_insn = c28x_print_insn;
 }
 
 static void c28x_cpu_init(Object* obj) {

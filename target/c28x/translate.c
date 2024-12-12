@@ -199,7 +199,8 @@ inline static void watch_for_overflow(TCGv_i32 ret, TCGv_i32 val1, TCGv_i32 val2
 #define C28X_WRITE_LOC16(loc, reg) C28X_RESOLVE_LOC(loc, reg, cpu_r, cpu_sr, C28X_MEM_ACCESS_WRITE, C28X_LOC_16)
 #define C28X_WRITE_LOC32(loc, reg) C28X_RESOLVE_LOC(loc, reg, cpu_r, cpu_sr, C28X_MEM_ACCESS_WRITE, C28X_LOC_32)
 
-static bool decode_insn(DisasContext* ctx, uint32_t insn);
+//
+
 #include "decode-insn16.c.inc"
 
 // ==============================================
@@ -457,7 +458,6 @@ static void c28x_tr_translate_insn(DisasContextBase* dcbase, CPUState* cs) {
 }
 
 static bool c28x_tr_disas_log(const DisasContextBase* dcbase, CPUState* cs, FILE* log_file) {
-    // FIXME: Remove this when everything is done!
     fprintf(log_file, "[C28X-TCG] pc: 0x%lx\n", dcbase->pc_first);
     fprintf(log_file, "IN: %s\n", lookup_symbol(dcbase->pc_first));
     target_disas(log_file, cs, dcbase);

@@ -473,7 +473,7 @@ inline static void gen_c28x_mem_register_access_l_mode(C28xLocDesc* desc, TCGv r
     }
 }
 
-void gen_c28x_loc_rw(C28xLocDesc* desc, TCGv_i32 reg) {
+void c28x_gen_loc_rw(C28xLocDesc* desc, TCGv_i32 reg) {
     switch (desc->mode) {
     case C28X_MEM_DIRECT_ACCESS_MODE:
         gen_c28x_loc_rw_direct_access_mode(desc, reg);
@@ -499,4 +499,100 @@ void gen_c28x_loc_rw(C28xLocDesc* desc, TCGv_i32 reg) {
     default:
         printf("[C28X-TCG]: ERROR! loc16/loc32 unimplemented: %d\n", desc->mode);
     }
+}
+
+char* c28x_parse_loc_desc(uint8_t loc) {
+    static char buf[64];
+    // init buf
+    for (int i = 0; i < 64; i++) {
+        buf[i] = 0;
+    }
+    if ((loc & 0b11000000) == 0) {
+        sprintf(buf, "DP[%x]", loc & MASK_IMM6);
+    }
+    if ((loc & 0b11000000) == 0b01000000) {
+        sprintf(buf, "SP-%x", loc & MASK_IMM6);
+    }
+    if (loc == 0b10111101) {
+        sprintf(buf, "*SP++");
+    }
+    if (loc == 0b10111110) {
+        sprintf(buf, "*--SP");
+    }
+    if ((loc & 0b11111000) == 0b10000000) {
+        sprintf(buf, "*XAR%d++", loc & MASK_IMM3);
+    }
+    if ((loc & 0b11111000) == 0b10001000) {
+        sprintf(buf, "*--XAR%d", loc & MASK_IMM3);
+    }
+    if ((loc & 0b11111000) == 0b10010000) {
+        sprintf(buf, "*+XAR%d[AR0]", loc & MASK_IMM3);
+    }
+    if ((loc & 0b11111000) == 0b10011000) {
+        sprintf(buf, "*+XAR%d[AR1]", loc & MASK_IMM3);
+    }
+    if ((loc & 0b11000000) == 0b11000000) {
+        sprintf(buf, "*+XAR%d[%d]", loc & MASK_IMM3, (loc >> 3) & MASK_IMM3);
+    }
+    if (loc == 0b10111000) {
+        sprintf(buf, "*XAR(ARP)");
+    }
+    if (loc == 0b10111001) {
+        sprintf(buf, "*++XAR(ARP)");
+    }
+    if (loc == 0b10111010) {
+        sprintf(buf, "*--XAR(ARP)");
+    }
+    if (loc == 0b10111011) {
+        sprintf(buf, "*0++XAR(ARP)");
+    }
+    if (loc == 0b10111100) {
+        sprintf(buf, "*0--XAR(ARP)");
+    }
+    if (loc == 0b10101111) {
+        sprintf(buf, "*BR0++");
+    }
+    if (loc == 0b10101111) {
+        sprintf(buf, "*BR0--");
+    }
+    if ((loc & 0b11111000) == 0b10110000) {
+        sprintf(buf, "*,ARP%d", loc & MASK_IMM3);
+    }
+    if (loc == 0b10111111) {
+        sprintf(buf, "*AR6%%++");
+    }
+    if ((loc & 0b11111000) == 0b10100000) {
+        sprintf(buf, "@XAR%d", loc & MASK_IMM3);
+    }
+    if (loc == 0b10101001) {
+        sprintf(buf, "ACC");
+    }
+    if (loc == 0b10101011) {
+        sprintf(buf, "P");
+    }
+    if (loc == 0b10101100) {
+        sprintf(buf, "XT");
+    }
+    if ((loc & 0b11111000) == 0b10100000) {
+        sprintf(buf, "*AR%d", loc & MASK_IMM3);
+    }
+    if (loc == 0b10101000) {
+        sprintf(buf, "@AH");
+    }
+    if (loc == 0b10101001) {
+        sprintf(buf, "@AL");
+    }
+    if (loc == 0b10101010) {
+        sprintf(buf, "@PH");
+    }
+    if (loc == 0b10101011) {
+        sprintf(buf, "@PL");
+    }
+    if (loc == 0b10101100) {
+        sprintf(buf, "@TH");
+    }
+    if (loc == 0b10101101) {
+        sprintf(buf, "@SP");
+    }
+    return buf;
 }
