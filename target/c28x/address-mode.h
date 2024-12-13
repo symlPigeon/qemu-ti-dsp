@@ -48,11 +48,13 @@ void c28x_gen_loc_rw(C28xLocDesc* desc, TCGv_i32 reg);
 char* c28x_parse_loc_desc(uint8_t loc);
 
 #define C28X_RESOLVE_LOC(loc, reg, cpu_r, cpu_sr, rw, width)                                                           \
-    C28xLocDesc* desc = g_malloc(sizeof(C28xLocDesc));                                                                 \
-    c28x_resolve_loc_desc(desc, cpu_r, cpu_sr, loc, rw, width);                                                        \
-    if (desc->pre_hook) desc->pre_hook(desc);                                                                          \
-    c28x_gen_loc_rw(desc, reg);                                                                                        \
-    if (desc->post_hook) desc->post_hook(desc);                                                                        \
-    g_free(desc);
+    {                                                                                                                  \
+        C28xLocDesc* desc = g_malloc(sizeof(C28xLocDesc));                                                             \
+        c28x_resolve_loc_desc(desc, cpu_r, cpu_sr, loc, rw, width);                                                    \
+        if (desc->pre_hook) desc->pre_hook(desc);                                                                      \
+        c28x_gen_loc_rw(desc, reg);                                                                                    \
+        if (desc->post_hook) desc->post_hook(desc);                                                                    \
+        g_free(desc);                                                                                                  \
+    }
 
 #endif

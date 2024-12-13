@@ -222,9 +222,55 @@ inline static void watch_for_overflow(TCGv_i32 ret, TCGv_i32 val1, TCGv_i32 val2
 
 #define ADD_TO_ACC_WITH_FLAGS(value, shift)                                                                            \
     TCGv _macro_arg_value = tcg_temp_new_i32();                                                                        \
+    tcg_gen_mov_tl(_macro_arg_value, value);                                                                           \
     SXM_EXTEND(_macro_arg_value);                                                                                      \
     _INTERNAL_ADD_TO_ACC_WITH_FLAGS(_macro_arg_value, shift);                                                          \
     tcg_temp_free_i32(_macro_arg_value);
+
+#define ADD_TO_ACC_WITH_FLAGS_NO_SXM(value, shift)                                                                     \
+    TCGv _macro_arg_value = tcg_temp_new_i32();                                                                        \
+    tcg_gen_mov_tl(_macro_arg_value, value);                                                                           \
+    _INTERNAL_ADD_TO_ACC_WITH_FLAGS(_macro_arg_value, shift);                                                          \
+    tcg_temp_free_i32(_macro_arg_value);
+
+inline static void gen_flag_add_loc16(TCGv s, TCGv a, TCGv b) {
+    TCGv sum = tcg_temp_new_i32();
+    tcg_gen_mov_tl(sum, s);
+    TCGv adder_1 = tcg_temp_new_i32();
+    TCGv adder_2 = tcg_temp_new_i32();
+    tcg_gen_mov_tl(adder_1, a);
+    tcg_gen_mov_tl(adder_2, b);
+
+    // set Z flag when sum is zero (Z flag)
+    tcg_gen_setcondi_tl(TCG_COND_EQ, cpu_sr[Z_FLAG], sum, 0);
+    // fetch the sign bit of sum
+    TCGv neg_flag = tcg_temp_new_i32();
+    tcg_gen_shri_tl(neg_flag, sum, 15);
+    tcg_gen_andi_tl(cpu_sr[N_FLAG], neg_flag, 1);
+
+    // set C flag, that is 16th bit, higher bit should be 0
+    tcg_gen_shri_tl(cpu_sr[C_FLAG], sum, 16);
+
+    // check overflow, first, adder_1 and adder_2 share the same sign (XNOR)
+    tcg_gen_shri_tl(adder_1, adder_1, 15);
+    tcg_gen_shri_tl(adder_2, adder_2, 15);
+    TCGv overflow_1 = tcg_temp_new_i32();
+    tcg_gen_xor_tl(overflow_1, adder_1, adder_2);
+    tcg_gen_not_tl(overflow_1, overflow_1);
+    // next, sum and adder_1 sign is different (XOR)
+    tcg_gen_shri_tl(sum, sum, 15);
+    TCGv overflow_2 = tcg_temp_new_i32();
+    tcg_gen_xor_tl(overflow_2, sum, adder_1);
+    // if both conditions are met, then overflow (V Flag)
+    tcg_gen_and_tl(cpu_sr[V_FLAG], overflow_1, overflow_2);
+
+    tcg_temp_free_i32(sum);
+    tcg_temp_free_i32(adder_1);
+    tcg_temp_free_i32(adder_2);
+    tcg_temp_free_i32(neg_flag);
+    tcg_temp_free_i32(overflow_1);
+    tcg_temp_free_i32(overflow_2);
+}
 
 #include "decode-insn16.c.inc"
 
@@ -341,28 +387,98 @@ static bool trans_ADD_ax_loc16(DisasContext* ctx, arg_ADD_ax_loc16* a) {
 
     // calculate the actual sum of AX
     tcg_gen_add_tl(add_sum, adder_1, adder_2);
-    // set Z flag when sum is zero (Z flag)
-    tcg_gen_setcondi_tl(TCG_COND_EQ, cpu_sr[Z_FLAG], add_sum, 0);
-    // fetch the sign bit of sum
-    TCGv neg_flag = tcg_temp_new_i32();
-    tcg_gen_shri_tl(neg_flag, add_sum, 15);
-    tcg_gen_andi_tl(cpu_sr[N_FLAG], neg_flag, 1);
 
-    // set C flag, that is 16th bit, higher bit should be 0
-    tcg_gen_shri_tl(cpu_sr[C_FLAG], add_sum, 16);
+    gen_flag_add_loc16(add_sum, adder_1, adder_2);
 
-    // check overflow, first, adder_1 and adder_2 share the same sign (XNOR)
-    tcg_gen_shri_tl(adder_1, adder_1, 15);
-    tcg_gen_shri_tl(adder_2, adder_2, 15);
-    TCGv overflow_1 = tcg_temp_new_i32();
-    tcg_gen_xor_tl(overflow_1, adder_1, adder_2);
-    tcg_gen_not_tl(overflow_1, overflow_1);
-    // next, sum and adder_1 sign is different (XOR)
-    tcg_gen_shri_tl(add_sum, add_sum, 15);
-    TCGv overflow_2 = tcg_temp_new_i32();
-    tcg_gen_xor_tl(overflow_2, add_sum, adder_1);
-    // if both conditions are met, then overflow (V Flag)
-    tcg_gen_and_tl(cpu_sr[V_FLAG], overflow_1, overflow_2);
+    tcg_temp_free_i32(adder_1);
+    tcg_temp_free_i32(adder_2);
+    tcg_temp_free_i32(add_sum);
+    return true;
+}
+
+static bool trans_ADD_loc16_ax(DisasContext* ctx, arg_ADD_loc16_ax* a) {
+    // so this should be a read-modify-write operation
+    TCGv target_value = tcg_temp_new_i32();
+    C28X_READ_LOC16(a->loc16, target_value);
+
+    TCGv adder_1 = tcg_temp_new_i32();
+    TCGv adder_2 = tcg_temp_new_i32();
+    TCGv add_sum = tcg_temp_new_i32();
+
+    tcg_gen_mov_tl(adder_1, target_value);
+    if (a->ax == 1) {
+        // AH
+        tcg_gen_shri_tl(adder_2, cpu_r[C28X_REG_ACC], 16);
+    } else {
+        // AL
+        tcg_gen_andi_tl(adder_2, cpu_r[C28X_REG_ACC], 0xffff);
+    }
+    tcg_gen_add_tl(add_sum, adder_1, adder_2);
+    TCGv add_sum_16 = tcg_temp_new_i32();
+    tcg_gen_andi_tl(add_sum_16, add_sum, 0xffff);
+    C28X_WRITE_LOC16(a->loc16, add_sum_16);
+
+    gen_flag_add_loc16(add_sum, adder_1, adder_2);
+
+    tcg_temp_free_i32(target_value);
+    tcg_temp_free_i32(adder_1);
+    tcg_temp_free_i32(adder_2);
+
+    return true;
+}
+
+static bool trans_ADD_acc_imm8(DisasContext* ctx, arg_ADD_acc_imm8* a) {
+    TCGv imm8 = tcg_temp_new_i32();
+    TCGv shft = tcg_constant_i32(0);
+    ADD_TO_ACC_WITH_FLAGS_NO_SXM(imm8, shft)
+    tcg_temp_free_i32(imm8);
+    tcg_temp_free_i32(shft);
+
+    return true;
+}
+
+static bool trans_ADDB_ax_imm8s(DisasContext* ctx, arg_ADDB_ax_imm8s* a) {
+    // NOTE: not sure if this is correct
+    TCGv imm8s = tcg_constant_i32(a->imm8s);
+    tcg_gen_ext8s_tl(imm8s, imm8s);
+    TCGv adder_1 = tcg_temp_new_i32();
+    TCGv adder_2 = tcg_temp_new_i32();
+    TCGv add_sum = tcg_temp_new_i32();
+
+    tcg_gen_mov_tl(adder_1, imm8s);
+    if (a->ax == 1) {
+        // AH
+        tcg_gen_shri_tl(adder_2, cpu_r[C28X_REG_ACC], 16);
+        tcg_gen_shli_tl(imm8s, imm8s, 16);
+        tcg_gen_add_tl(cpu_r[C28X_REG_ACC], cpu_r[C28X_REG_ACC], imm8s);
+    } else {
+        // AL
+        tcg_gen_andi_tl(adder_2, cpu_r[C28X_REG_ACC], 0xffff);
+        // Not sure if this add will affect AH
+        // assume not
+        TCGv temp = tcg_temp_new_i32();
+        tcg_gen_add_tl(temp, cpu_r[C28X_REG_ACC], imm8s);
+        tcg_gen_andi_tl(temp, temp, 0x0000ffff);
+        tcg_gen_andi_tl(cpu_r[C28X_REG_ACC], cpu_r[C28X_REG_ACC], 0xffff0000);
+        tcg_gen_or_tl(cpu_r[C28X_REG_ACC], cpu_r[C28X_REG_ACC], temp);
+        tcg_temp_free_i32(temp);
+    }
+
+    tcg_gen_add_tl(add_sum, adder_1, adder_2);
+
+    gen_flag_add_loc16(add_sum, adder_1, adder_2);
+
+    tcg_temp_free_i32(adder_1);
+    tcg_temp_free_i32(adder_2);
+    tcg_temp_free_i32(add_sum);
+    tcg_temp_free_i32(imm8s);
+
+    return true;
+}
+
+static bool trans_ADDB_sp_imm7(DisasContext* ctx, arg_ADDB_sp_imm7* a) {
+    // No flags and modes
+    tcg_gen_addi_tl(cpu_r[C28X_REG_SP], cpu_r[C28X_REG_SP], a->imm7);
 
     return true;
 }
@@ -434,6 +550,46 @@ static bool trans_ADD_acc_loc16_shft(DisasContext* ctx, arg_ADD_acc_loc16_shft* 
     TCGv shift = tcg_constant_i32(a->shft);
 
     ADD_TO_ACC_WITH_FLAGS(target_value, shift)
+
+    return true;
+}
+
+static bool trans_ADD_loc16_s16(DisasContext* ctx, arg_ADD_loc16_s16* a) {
+    TCGv target_value = tcg_temp_new_i32();
+    C28X_READ_LOC16(a->loc16, target_value);
+    TCGv imm16 = tcg_constant_i32(a->imm16s);
+
+    TCGv adder_1 = tcg_temp_new_i32();
+    TCGv adder_2 = tcg_temp_new_i32();
+    TCGv add_sum = tcg_temp_new_i32();
+
+    tcg_gen_ext16s_tl(adder_1, target_value);
+    tcg_gen_ext16s_tl(adder_2, imm16);
+    tcg_gen_add_tl(add_sum, adder_1, adder_2);
+
+    tcg_gen_setcondi_tl(TCG_COND_EQ, cpu_sr[Z_FLAG], add_sum, 0);
+    tcg_gen_setcondi_tl(TCG_COND_LT, cpu_sr[N_FLAG], add_sum, 0);
+    watch_for_carry(add_sum, adder_1);
+
+    TCGv store_value = tcg_temp_new_i32();
+    tcg_gen_andi_tl(store_value, add_sum, 0xffff);
+    C28X_WRITE_LOC16(a->loc16, store_value);
+    tcg_temp_free_i32(store_value);
+
+    TCGv overflow_1 = tcg_temp_new_i32();
+    tcg_gen_xor_tl(overflow_1, adder_1, adder_2);
+    tcg_gen_not_tl(overflow_1, overflow_1);
+    TCGv overflow_2 = tcg_temp_new_i32();
+    tcg_gen_xor_tl(overflow_2, add_sum, adder_1);
+    tcg_gen_and_tl(cpu_sr[V_FLAG], overflow_1, overflow_2);
+
+    tcg_temp_free_i32(target_value);
+    tcg_temp_free_i32(imm16);
+    tcg_temp_free_i32(adder_1);
+    tcg_temp_free_i32(adder_2);
+    tcg_temp_free_i32(add_sum);
+    tcg_temp_free_i32(overflow_1);
+    tcg_temp_free_i32(overflow_2);
 
     return true;
 }
