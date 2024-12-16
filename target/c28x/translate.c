@@ -150,7 +150,7 @@ inline static void watch_for_overflow(TCGv_i32 ret, TCGv_i32 val1, TCGv_i32 val2
     IF_CONDi(ovm_set_and_overflow, TCG_COND_NE, overflow, 0)
     // overflow
     tcg_gen_movi_i32(cpu_sr[V_FLAG], 1);
-    tcg_gen_movi_i32(cpu_r[C28X_REG_ACC], 0x7FFFFFFF);
+    tcg_gen_movi_i32(ret, 0x7FFFFFFF);
     ELSE(ovm_set_and_overflow)
     // no overflow, just ignore this
     ENDIF(ovm_set_and_overflow)
@@ -158,7 +158,7 @@ inline static void watch_for_overflow(TCGv_i32 ret, TCGv_i32 val1, TCGv_i32 val2
     IF_CONDi(ovm_set_and_underflow, TCG_COND_NE, underflow, 0)
     // underflow
     tcg_gen_movi_i32(cpu_sr[V_FLAG], 1);
-    tcg_gen_movi_i32(cpu_r[C28X_REG_ACC], 0x80000000);
+    tcg_gen_movi_i32(ret, 0x80000000);
     ELSE(ovm_set_and_underflow)
     // no underflow, just ignore this
     ENDIF(ovm_set_and_underflow)
@@ -621,6 +621,32 @@ static bool trans_ADD_loc16_s16(DisasContext* ctx, arg_ADD_loc16_s16* a) {
     tcg_temp_free_i32(add_sum);
     tcg_temp_free_i32(overflow_1);
     tcg_temp_free_i32(overflow_2);
+
+    return true;
+}
+
+static bool trans_ADDL_loc32_acc(DisasContext* ctx, arg_ADDL_loc32_acc* a) {
+    TCGv target_value = tcg_temp_new_i32();
+    C28X_READ_LOC32(a->loc32, target_value);
+
+    TCGv adder_1 = tcg_temp_new_i32();
+    TCGv adder_2 = tcg_temp_new_i32();
+    TCGv add_sum = tcg_temp_new_i32();
+
+    tcg_gen_mov_tl(adder_1, target_value);
+    tcg_gen_mov_tl(adder_2, cpu_r[C28X_REG_ACC]);
+    tcg_gen_add_tl(add_sum, adder_1, adder_2);
+
+    watch_for_carry(add_sum, adder_1);
+    watch_for_overflow(add_sum, adder_1, adder_2, OP_ADD_I32);
+    gen_set_z_flag(add_sum);
+    gen_set_n_flag(add_sum);
+    C28X_WRITE_LOC32(a->loc32, add_sum);
+    
+    tcg_temp_free_i32(target_value);
+    tcg_temp_free_i32(adder_1);
+    tcg_temp_free_i32(adder_2);
+    tcg_temp_free_i32(add_sum);
 
     return true;
 }
