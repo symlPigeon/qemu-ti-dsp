@@ -4,20 +4,29 @@
 &loc32                  loc32 !extern
 &shft_loc16             shft loc16          
 &loc16_s16              loc16 imm16s
-
+&imm16                  imm16
+&ax_loc16_imm16         ax loc16 imm16
 
 @op_MOVL_xar0_imm22     .... .... .. imm22:22                               &imm22
-@op_ADD_acc             .... .... .... shft:4 imm16:16                      &shft_imm16
+@op_shft_imm16          .... .... .... shft:4 imm16:16                      &shft_imm16
 @op_acc_loc16           .... .... .... .... .... .... loc16:8               &loc16
 @op_loc16_s16           .... .... loc16:8 imm16s:16                         &loc16_s16
 @op_ADD_acc_loc16_shft  .... .... .... .... .... shft:4 loc16:8             &shft_loc16
 @op_loc32               .... .... .... .... .... .... loc32:8               &loc32
+@op_imm16               .... .... .... .... imm16:16                        &imm16
+@op_ax_loc16_imm16      .... ... ax:1 loc16:8 imm16:16                      &ax_loc16_imm16
 
-ADD_acc_imm16_shft      1111 1111 0001 .... .... .... .... ....             @op_ADD_acc
+ADD_acc_imm16_shft      1111 1111 0001 .... .... .... .... ....             @op_shft_imm16
 ADD_acc_loc16_t         0101 0110 0010 0011 0000 0000 .... ....             @op_acc_loc16
 ADD_acc_loc16_shft      0101 0110 0000 0100 0000 .... .... ....             @op_ADD_acc_loc16_shft
 ADD_loc16_s16           0000 1000 .... .... .... .... .... ....             @op_loc16_s16
 ADDL_loc32_acc          0101 0110 0000 0001 0000 0000 .... ....             @op_loc32
+ADDUL_p_loc32           0101 0110 0101 0111 0000 0000 .... ....             @op_loc32
+
+AND_acc_imm16_shft      0011 1110 0000 .... .... .... .... ....             @op_shft_imm16
+AND_acc_imm16_shft16    0101 0110 0000 1000 .... .... .... ....             @op_imm16
+AND_ax_loc16_imm16      1100 110. .... .... .... .... .... ....             @op_ax_loc16_imm16
+AND_loc16_imm16s        0001 1000 .... .... .... .... .... ....             @op_loc16_s16
 
 MOV_acc_loc16_t         0101 0110 0000 0110 0000 0000 .... ....             @op_acc_loc16
 MOVL_xar0_imm22         1000 1101 00.. .... .... .... .... ....             @op_MOVL_xar0_imm22

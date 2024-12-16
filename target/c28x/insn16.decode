@@ -5,6 +5,9 @@
 &imm8                imm8
 &ax_imm8s            ax imm8s
 &imm7                imm7
+&ax_shft             ax shft
+&ax                  ax
+&shft                shft
 
 @op_ADDB_xarn_imm7   .... . xarn:3 . imm7:7                        &xarn_imm7
 @op_loc16            .... .... loc16:8                             &loc16
@@ -13,6 +16,9 @@
 @op_ax_imm8s         .... ... ax:1 imm8s:8                         &ax_imm8s
 @op_imm7             .... .... . imm7:7                            &imm7
 @op_loc32            .... .... loc32:8                             &loc32
+@op_ax_shft          .... .... ... ax:1 shft:4                     &ax_shft
+@op_ax               .... .... .... ... ax:1                       &ax
+@op_shft             .... .... .... shft:4                         &shft
 
 ABS_acc              1111 1111 0101 0110
 ABSTC_acc            0101 0110 0101 1111
@@ -26,5 +32,20 @@ ADDB_sp_imm7         1111 1110 0... ....                           @op_imm7
 ADDB_xarn_7bit       1101 1... 0... ....                           @op_ADDB_xarn_imm7
 ADDCU_acc_loc16      0000 1100 .... ....                           @op_loc16
 ADDL_acc_loc32       0000 0111 .... ....                           @op_loc32
+ADDU_acc_loc16       0000 1101 .... ....                           @op_loc16
+ADRK_imm8            1111 1100 .... ....                           @op_imm8
+
+AND_acc_loc16        1000 1001 .... ....                           @op_loc16
+AND_loc16_ax         1100 000. .... ....                           @op_ax_loc16
+AND_ax_loc16         1100 111. .... ....                           @op_ax_loc16
+AND_ax_imm8s         1001 000. .... ....                           @op_ax_imm8s    
+
+ASP                  0111 0110 0001 1011
+
+ASR_ax_shft          1111 1111 101. ....                           @op_ax_shft
+ASR_ax_t             1111 1111 0110 010.                           @op_ax
+ASR64_acc_p_shft     0101 0110 1000 ....                           @op_shft
+ASR64_acc_p_t        0101 0110 0010 1100
+ASRL_acc_t           0101 0110 0001 0000
 
 LB_xar7              0111 0110 0010 0000
