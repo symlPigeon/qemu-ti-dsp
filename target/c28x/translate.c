@@ -490,6 +490,37 @@ static bool trans_ADDB_xarn_7bit(DisasContext* ctx, arg_ADDB_xarn_7bit* a) {
     return true;
 }
 
+static bool trans_ADDCU_acc_loc16(DisasContext* ctx, arg_ADDCU_acc_loc16* a) {
+    // ACC = ACC + 0:[loc16] + Carry
+    TCGv target_value = tcg_temp_new_i32();
+    C28X_READ_LOC16(a->loc16, target_value);
+    TCGv shft = tcg_constant_i32(0);
+
+    tcg_gen_ext16u_tl(target_value, target_value);    // zero extend first
+    tcg_gen_add_tl(target_value, target_value, cpu_sr[C_FLAG]);
+
+    ADD_TO_ACC_WITH_FLAGS_NO_SXM(target_value, shft);
+
+    tcg_temp_free_i32(target_value);
+    tcg_temp_free_i32(shft);
+
+    return true;
+}
+
+static bool trans_ADDL_acc_loc32(DisasContext* ctx, arg_ADDL_acc_loc32* a) {
+    // ACC = ACC + [loc32]
+    TCGv target_value = tcg_temp_new_i32();
+    C28X_READ_LOC32(a->loc32, target_value);
+    TCGv shft = tcg_constant_i32(0);
+
+    ADD_TO_ACC_WITH_FLAGS_NO_SXM(target_value, shft);
+
+    tcg_temp_free_i32(target_value);
+    tcg_temp_free_i32(shft);
+
+    return true;
+}
+
 static bool trans_LB_xar7(DisasContext* ctx, arg_LB_xar7* a) {
     // No flags and modes
     TCGv baddr = tcg_temp_new_i32();

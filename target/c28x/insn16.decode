@@ -1,5 +1,6 @@
 &xarn_imm7           xarn imm7
 &loc16               loc16
+&loc32               loc32
 &ax_loc16            ax loc16
 &imm8                imm8
 &ax_imm8s            ax imm8s
@@ -11,6 +12,7 @@
 @op_imm8             .... .... imm8:8                              &imm8
 @op_ax_imm8s         .... ... ax:1 imm8s:8                         &ax_imm8s
 @op_imm7             .... .... . imm7:7                            &imm7
+@op_loc32            .... .... loc32:8                             &loc32
 
 ABS_acc              1111 1111 0101 0110
 ABSTC_acc            0101 0110 0101 1111
@@ -22,4 +24,7 @@ ADD_acc_imm8         0000 1001 .... ....                           @op_imm8
 ADDB_ax_imm8s        1001 110. .... ....                           @op_ax_imm8s
 ADDB_sp_imm7         1111 1110 0... ....                           @op_imm7
 ADDB_xarn_7bit       1101 1... 0... ....                           @op_ADDB_xarn_imm7
+ADDCU_acc_loc16      0000 1100 .... ....                           @op_loc16
+ADDL_acc_loc32       0000 0111 .... ....                           @op_loc32
+
 LB_xar7              0111 0110 0010 0000
