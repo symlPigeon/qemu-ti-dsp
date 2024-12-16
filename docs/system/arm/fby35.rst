@@ -12,7 +12,7 @@ include various compute accelerators (video, inferencing, etc). At the moment,
 only the first server slot's BIC is included.
 
 Yosemite v3.5 is itself a sled which fits into a 40U chassis, and 3 sleds
-can be fit into a chassis. See `here <https://www.opencompute.org/products/423/wiwynn-yosemite-v3-server>`__
+can be fit into a chassis. See `here <https://www.opencompute.org/products-chiplets/237/wiwynn-yosemite-v3-server>`__
 for an example.
 
 In this generation, the BMC is an AST2600 and each BIC is an AST1030. The BMC
@@ -45,3 +45,8 @@ process starts.
     $ screen /dev/tty0 # In a separate TMUX pane, terminal window, etc.
     $ screen /dev/tty1
     $ (qemu) c		   # Start the boot process once screen is setup.
+
+This machine model supports emulation of the boot from the CE0 flash device by
+setting option ``execute-in-place``. When using this option, the CPU fetches
+instructions to execute by reading CE0 and not from a preloaded ROM
+initialized at machine init time. As a result, execution will be slower.

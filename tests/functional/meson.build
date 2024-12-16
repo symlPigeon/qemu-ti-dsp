@@ -11,14 +11,21 @@ endif
 
 # Timeouts for individual tests that can be slow e.g. with debugging enabled
 test_timeouts = {
+  'aarch64_aspeed' : 600,
   'aarch64_raspi4' : 480,
   'aarch64_sbsaref_alpine' : 720,
   'aarch64_sbsaref_freebsd' : 720,
+  'aarch64_tuxrun' : 240,
   'aarch64_virt' : 720,
   'acpi_bits' : 420,
-  'arm_aspeed' : 600,
+  'arm_aspeed_palmetto' : 120,
+  'arm_aspeed_romulus' : 120,
+  'arm_aspeed_ast2500' : 480,
+  'arm_aspeed_ast2600' : 720,
+  'arm_aspeed_rainier' : 240,
   'arm_bpim2u' : 500,
   'arm_collie' : 180,
+  'arm_cubieboard' : 360,
   'arm_orangepi' : 540,
   'arm_raspi2' : 120,
   'arm_tuxrun' : 240,
@@ -32,6 +39,7 @@ test_timeouts = {
   'ppc64_tuxrun' : 420,
   'riscv64_tuxrun' : 120,
   's390x_ccw_virtio' : 420,
+  'sh4_tuxrun' : 240,
 }
 
 tests_generic_system = [
@@ -47,12 +55,15 @@ tests_generic_bsduser = [
 ]
 
 tests_aarch64_system_thorough = [
+  'aarch64_aspeed',
   'aarch64_raspi3',
   'aarch64_raspi4',
   'aarch64_sbsaref',
   'aarch64_sbsaref_alpine',
   'aarch64_sbsaref_freebsd',
+  'aarch64_tuxrun',
   'aarch64_virt',
+  'aarch64_xlnx_versal',
   'multiprocess',
 ]
 
@@ -61,13 +72,21 @@ tests_alpha_system_thorough = [
 ]
 
 tests_arm_system_thorough = [
-  'arm_aspeed',
+  'arm_aspeed_ast1030',
+  'arm_aspeed_palmetto',
+  'arm_aspeed_romulus',
+  'arm_aspeed_ast2500',
+  'arm_aspeed_ast2600',
+  'arm_aspeed_rainier',
   'arm_bpim2u',
   'arm_canona1100',
   'arm_collie',
+  'arm_cubieboard',
+  'arm_emcraft_sf2',
   'arm_integratorcp',
   'arm_orangepi',
   'arm_raspi2',
+  'arm_smdkc210',
   'arm_sx1',
   'arm_vexpress',
   'arm_tuxrun',

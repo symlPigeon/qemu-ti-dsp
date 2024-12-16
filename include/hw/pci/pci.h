@@ -297,6 +297,9 @@ int pci_bus_get_irq_level(PCIBus *bus, int irq_num);
 uint32_t pci_bus_get_slot_reserved_mask(PCIBus *bus);
 void pci_bus_set_slot_reserved_mask(PCIBus *bus, uint32_t mask);
 void pci_bus_clear_slot_reserved_mask(PCIBus *bus, uint32_t mask);
+bool pci_bus_add_fw_cfg_extra_pci_roots(FWCfgState *fw_cfg,
+                                        PCIBus *bus,
+                                        Error **errp);
 /* 0 <= pin <= 3 0 = INTA, 1 = INTB, 2 = INTC, 3 = INTD */
 static inline int pci_swizzle(int slot, int pin)
 {
@@ -668,16 +671,6 @@ static inline void pci_irq_assert(PCIDevice *pci_dev)
 static inline void pci_irq_deassert(PCIDevice *pci_dev)
 {
     pci_set_irq(pci_dev, 0);
-}
-
-/*
- * FIXME: PCI does not work this way.
- * All the callers to this method should be fixed.
- */
-static inline void pci_irq_pulse(PCIDevice *pci_dev)
-{
-    pci_irq_assert(pci_dev);
-    pci_irq_deassert(pci_dev);
 }
 
 MSIMessage pci_get_msi_message(PCIDevice *dev, int vector);
