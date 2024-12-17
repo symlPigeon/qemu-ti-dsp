@@ -19,9 +19,9 @@ static bool first_reset = true;
 static int c28x_cpu_mmu_index(CPUState* cs, bool ifetch) { return ifetch ? MMU_CODE_IDX : MMU_DATA_IDX; }
 
 static void c28x_cpu_disas_set_info(CPUState* cpu, disassemble_info* info) {
-    printf("[C28X-DISAS] c28x_cpu_disas_set_info\n");
     info->mach = bfd_arch_c28x;
     info->print_insn = c28x_print_insn;
+    info->print_address_func = c28x_print_address;
 }
 
 static void c28x_cpu_init(Object* obj) {
@@ -114,7 +114,7 @@ static void c28x_cpu_dump_state(CPUState* cs, FILE* f, int flags) {
     qemu_fprintf(f, "================== CPU  Registers ==================\n");
     qemu_fprintf(f, "PC:    " TARGET_FMT_lx "\n", env->r[C28X_REG_PC]);
     qemu_fprintf(f, "RPC:   " TARGET_FMT_lx "\n", env->r[C28X_REG_RPC]);
-    qemu_fprintf(f, "DP:   " TARGET_FMT_lx "\n", env->r[C28X_REG_DP]);
+    qemu_fprintf(f, "DP:    " TARGET_FMT_lx "\n", env->r[C28X_REG_DP]);
     qemu_fprintf(f, "SP:    " TARGET_FMT_lx "\n", env->r[C28X_REG_SP]);
     qemu_fprintf(f, "XT:    " TARGET_FMT_lx "\n", env->r[C28X_REG_XT]);
     qemu_fprintf(f, "ACC:   " TARGET_FMT_lx "\n", env->r[C28X_REG_ACC]);
@@ -166,8 +166,8 @@ static void c28x_cpu_set_pc(CPUState* cs, vaddr value) {
     C28XCPU* cpu = C28X_CPU(cs);
     CPUC28XState* env = &cpu->env;
 
-    env->r[C28X_REG_PC] = value;
-    printf("[C28X-CPU] Set PC to " TARGET_FMT_lx "\n", (unsigned int)value);
+    env->r[C28X_REG_PC] = value / 2;
+    printf("[C28X-CPU] Set PC to " TARGET_FMT_lx "\n", (unsigned int)value / 2);
 }
 
 static bool c28x_cpu_exec_interrupt(CPUState* cs, int interrupt_request) {

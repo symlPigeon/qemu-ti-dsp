@@ -1,6 +1,7 @@
 #include "qemu/osdep.h"
 
 #include "address-mode.h"
+#include "condition.h"
 #include "cpu.h"
 
 typedef struct DisasContext {
@@ -57,6 +58,10 @@ int c28x_print_insn(bfd_vma addr, disassemble_info* info) {
     return 2;
 }
 
+void c28x_print_address(bfd_vma addr, struct disassemble_info* info) {
+    info->fprintf_func(info->stream, "0x%08" PRIx64 ":  ", addr / 2);
+}
+
 #define INSN(opcode, mnemonic, format, ...)                                                                            \
     static bool trans_##opcode(DisasContext* pctx, arg_##opcode* a) {                                                  \
         output(#mnemonic, format, ##__VA_ARGS__);                                                                      \
@@ -67,6 +72,7 @@ int c28x_print_insn(bfd_vma addr, disassemble_info* info) {
 #define XARn(x) c28x_cpu_r_names[C28X_REG_XAR0 + x]
 #define LOC(x)  c28x_parse_loc_desc(x)
 #define AX(x)   (x) == 1 ? "AH" : "AL"
+#define COND(x) c28x_parse_condition(x)
 
 INSN(ABS_acc, ABS, "ACC")
 INSN(ABSTC_acc, ABSTC, "ACC")
@@ -107,6 +113,8 @@ INSN(ASR64_acc_p_shft, ASR64, "ACC:P, #%d", a->shft)
 INSN(ASR64_acc_p_t, ASR64, "ACC:P, T")
 INSN(ASRL_acc_t, ASRL, "ACC, T")
 
+INSN(B_offset16_cond, B, "%s, %d", COND(a->cond), a->offset16)
+
 INSN(MOV_acc_loc16_t, MOV, "ACC, %s << T", LOC(a->loc16))
-INSN(LB_xar7, LB, "")
+INSN(LB_xar7, LB, "XAR7")
 INSN(MOVL_xar0_imm22, MOVL, "XAR0, #0x%x", a->imm22)

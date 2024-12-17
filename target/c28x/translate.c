@@ -1,4 +1,5 @@
 #include "address-mode.h"
+#include "condition.h"
 #include "cpu.h"
 #include "disas/disas.h"
 #include "exec/cpu_ldst.h"
@@ -31,7 +32,7 @@ struct DisasContext {
     DisasContextBase base;
     CPUC28XState* env;
     CPUState* cs;
-    uint32_t pc;
+    target_long pc;
 };
 
 void c28x_tcg_init(void) {
@@ -55,7 +56,7 @@ static void gen_goto_tb(DisasContext* ctx, int n, target_ulong dest) {
         tcg_gen_movi_i32(cpu_r[C28X_REG_PC], dest);
         tcg_gen_lookup_and_goto_ptr();
     }
-    ctx->base.is_jmp = DISAS_CHAIN;
+    ctx->base.is_jmp = DISAS_NORETURN;
 }
 
 // Some Macros for generating code
@@ -81,6 +82,7 @@ static void gen_goto_tb(DisasContext* ctx, int n, target_ulong dest) {
     gen_set_label(label##_label_else);
 
 #define ENDIF(label) gen_set_label(label##_endif);
+#define SKIP()       ;
 
 // flag options
 #define clear_c_flag tcg_gen_movi_i32(cpu_sr[C_FLAG], 0)
@@ -856,6 +858,7 @@ static bool trans_LB_xar7(DisasContext* ctx, arg_LB_xar7* a) {
     tcg_gen_andi_tl(baddr, cpu_r[C28X_REG_XAR7], 0x3FFFFF);
 
     tcg_gen_mov_tl(cpu_r[C28X_REG_PC], baddr);
+
     ctx->base.is_jmp = DISAS_LOOKUP;
 
     tcg_temp_free_i32(baddr);
@@ -1052,6 +1055,30 @@ static bool trans_AND_loc16_imm16s(DisasContext* ctx, arg_AND_loc16_imm16s* a) {
     return true;
 }
 
+static bool trans_B_offset16_cond(DisasContext* ctx, arg_B_offset16_cond* a) {
+    TCGv cond = tcg_temp_new_i32();
+    gen_test_condition(a->cond, cond, cpu_sr);
+    TCGv baddr = tcg_constant_tl(a->offset16);
+    tcg_gen_ext16s_tl(baddr, baddr);
+    tcg_gen_add_tl(baddr, baddr, cpu_r[C28X_REG_PC]);
+
+    tcg_gen_andi_tl(baddr, baddr, 0x3FFFFF);    // 22 bits PC mask
+
+    IF_CONDi(b_set, TCG_COND_EQ, cond, 1)
+    tcg_gen_mov_tl(cpu_r[C28X_REG_PC], baddr);
+    gen_goto_tb(ctx, 0, ctx->pc + (int16_t)a->offset16);
+    ELSE(b_set)
+    SKIP()
+    ENDIF(b_set)
+
+    tcg_temp_free_i32(cond);
+    tcg_temp_free_i32(baddr);
+
+    ctx->base.is_jmp = DISAS_CHAIN;
+
+    return true;
+}
+
 static bool trans_MOV_acc_loc16_t(DisasContext* ctx, arg_MOV_acc_loc16_t* a) {
     TCGv target_value = tcg_temp_new_i32();
     C28X_READ_LOC16(a->loc16, target_value);
@@ -1077,9 +1104,7 @@ static void c28x_tr_init_disas_context(DisasContextBase* dcbase, CPUState* cs) {
     CPUC28XState* env = cpu_env(cs);
     DisasContext* ctx = container_of(dcbase, DisasContext, base);
     ctx->env = env;
-    ctx->pc = ctx->base.pc_first;
-    // log out ctx base params
-    printf("[C28X-TCG] ctx->base->num_insns: %d\n", ctx->base.num_insns);
+    ctx->pc = ctx->base.pc_first / 2;
 }
 
 static void c28x_tr_tb_start(DisasContextBase* dcbase, CPUState* cs) {}
@@ -1090,12 +1115,13 @@ static void c28x_tr_tb_stop(DisasContextBase* dcbase, CPUState* cs) {
     case DISAS_NEXT:
     case DISAS_TOO_MANY:
     case DISAS_CHAIN:
-        gen_goto_tb(ctx, 1, ctx->base.pc_next);
-        tcg_gen_movi_tl(cpu_r[C28X_REG_PC], ctx->base.pc_next);
+        gen_goto_tb(ctx, 1, ctx->pc);
+        tcg_gen_movi_tl(cpu_r[C28X_REG_PC], ctx->pc);
         /* fall through */
     case DISAS_LOOKUP:
     case DISAS_EXIT:
-        tcg_gen_exit_tb(NULL, 0);
+        // tcg_gen_exit_tb(NULL, 0);
+        tcg_gen_lookup_and_goto_ptr();
         break;
     case DISAS_NORETURN:
         break;
@@ -1107,7 +1133,7 @@ static void c28x_tr_tb_stop(DisasContextBase* dcbase, CPUState* cs) {
 
 static void c28x_insn_start(DisasContextBase* dcbase, CPUState* cs) {
     DisasContext* ctx = container_of(dcbase, DisasContext, base);
-    tcg_gen_insn_start(ctx->base.pc_next);
+    tcg_gen_insn_start(ctx->pc);
 }
 
 static void c28x_tr_translate_insn(DisasContextBase* dcbase, CPUState* cs) {
@@ -1115,30 +1141,30 @@ static void c28x_tr_translate_insn(DisasContextBase* dcbase, CPUState* cs) {
     uint16_t opcode16;
 
     // load first 16-bits for decoding
-    opcode16 = cpu_lduw_be_data(ctx->env, ctx->base.pc_next);
+    opcode16 = cpu_lduw_be_data(ctx->env, ctx->pc * 2);
 
     if (!decode_insn16(ctx, opcode16)) {
         // load next 16-bits for decoding
-        uint32_t opcode32 = cpu_lduw_be_data(ctx->env, ctx->base.pc_next + 2) | (opcode16 << 16);
+        uint32_t opcode32 = cpu_lduw_be_data(ctx->env, ctx->pc * 2 + 2) | (opcode16 << 16);
         if (!decode_insn32(ctx, opcode32)) {
-            error_report("[C28X-TCG] c28x_tr_translate_insn: unknown instruction, pc: 0x%lx", ctx->base.pc_next);
-            error_report("[C28X-TCG] c28x_tr_translate_insn: opcode16: 0x%x, opcode32: 0x%x", opcode16, opcode32);
+            error_report("[C28X-TCG] c28x_tr_translate_insn: unknown instruction, pc: 0x%x", ctx->pc);
+            error_report("[C28X-TCG] c28x_tr_translate_insn: opcode16: 0x%04x, opcode32: 0x%08x", opcode16, opcode32);
             gen_helper_raise_illegal_instruction(tcg_env);
 
             ctx->base.is_jmp = DISAS_NORETURN;
             return;
         } else {
             // legal 32-bit instruction
-            ctx->base.pc_next += 4;
+            ctx->pc += 2;
         }
     } else {
         // legal 16-bit instruction
-        ctx->base.pc_next += 2;
+        ctx->pc += 1;
     }
+    ctx->base.pc_next = ctx->pc * 2;
 }
 
 static bool c28x_tr_disas_log(const DisasContextBase* dcbase, CPUState* cs, FILE* log_file) {
-    fprintf(log_file, "[C28X-TCG] pc: 0x%lx\n", dcbase->pc_first);
     fprintf(log_file, "IN: %s\n", lookup_symbol(dcbase->pc_first));
     target_disas(log_file, cs, dcbase);
     return true;
@@ -1155,5 +1181,8 @@ static const TranslatorOps c28x_tr_ops = {
 
 void gen_intermediate_code(CPUState* cs, TranslationBlock* tb, int* max_insns, vaddr pc, void* host_pc) {
     DisasContext dc = {};
+    // base->pc_first should be the actual address
+    // in C28x, one byte is 16-bits wide, so we need to multiply by 2
+    // ctx->pc is the address of guest, which C28X_REG_PC holds
     translator_loop(cs, tb, max_insns, pc, host_pc, &c28x_tr_ops, &dc.base);
 }

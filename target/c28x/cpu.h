@@ -105,6 +105,7 @@ struct ArchCPU {
 };
 
 int c28x_print_insn(bfd_vma addr, disassemble_info* info);
+void c28x_print_address(bfd_vma addr, struct disassemble_info* info);
 
 // FIXME: The CPU interrupt function is not implemented yet!
 // !!!Handle CPU interrupts HERE!!!
@@ -115,7 +116,7 @@ int c28x_print_insn(bfd_vma addr, disassemble_info* info);
 #define MMU_DATA_IDX 1
 
 static inline void cpu_get_tb_cpu_state(CPUC28XState* env, vaddr* pc, vaddr* cs_base, uint32_t* flags) {
-    *pc = env->r[C28X_REG_PC];
+    *pc = env->r[C28X_REG_PC] * 2;
     *cs_base = 0;
     *flags = 0;
 }
