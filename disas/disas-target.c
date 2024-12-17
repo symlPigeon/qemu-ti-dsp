@@ -43,7 +43,11 @@ void target_disas(FILE *out, CPUState *cpu, const struct DisasContextBase *db)
     }
 
     for (pc = code; size > 0; pc += count, size -= count) {
-        fprintf(out, "0x%08" PRIx64 ":  ", pc);
+        if (s.info.print_address_func) {
+            s.info.print_address_func(pc, &s.info);
+        } else {
+            fprintf(out, "0x%08" PRIx64 ":  ", pc);
+        }
         count = s.info.print_insn(pc, &s.info);
         fprintf(out, "\n");
         if (count < 0) {
