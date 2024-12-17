@@ -7,6 +7,8 @@
 &imm16                  imm16
 &ax_loc16_imm16         ax loc16 imm16
 &cond_offset16          cond offset16
+&arn_offset16           arn offset16
+&arn_arm_offset16       arn arm offset16
 
 @op_MOVL_xar0_imm22     .... .... .. imm22:22                               &imm22
 @op_shft_imm16          .... .... .... shft:4 imm16:16                      &shft_imm16
@@ -17,6 +19,8 @@
 @op_imm16               .... .... .... .... imm16:16                        &imm16
 @op_ax_loc16_imm16      .... ... ax:1 loc16:8 imm16:16                      &ax_loc16_imm16
 @op_cond_offset16       .... .... .... cond:4 offset16:16                   &cond_offset16       
+@op_arn_offset16        .... .... .... . arn:3 offset16:16                  &arn_offset16
+@op_arn_arm_offset16    .... .... .. arn:3 arm:3 offset16:16                &arn_arm_offset16
 
 ADD_acc_imm16_shft      1111 1111 0001 .... .... .... .... ....             @op_shft_imm16
 ADD_acc_loc16_t         0101 0110 0010 0011 0000 0000 .... ....             @op_acc_loc16
@@ -31,6 +35,10 @@ AND_ax_loc16_imm16      1100 110. .... .... .... .... .... ....             @op_
 AND_loc16_imm16s        0001 1000 .... .... .... .... .... ....             @op_loc16_s16
 
 B_offset16_cond         1111 1111 1110 .... .... .... .... ....             @op_cond_offset16
+BANZ_offset16_arn       0000 0000 0000 1... .... .... .... ....             @op_arn_offset16
+BAR_offset16_arn_arm_eq 1000 1111 10.. .... .... .... .... ....             @op_arn_arm_offset16
+BAR_offset16_arn_arm_ne 1000 1111 11.. .... .... .... .... ....             @op_arn_arm_offset16
+BF_offset16_cond        0101 0110 1100 .... .... .... .... ....             @op_cond_offset16
 
 MOV_acc_loc16_t         0101 0110 0000 0110 0000 0000 .... ....             @op_acc_loc16
 MOVL_xar0_imm22         1000 1101 00.. .... .... .... .... ....             @op_MOVL_xar0_imm22

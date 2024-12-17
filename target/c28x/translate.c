@@ -7,6 +7,7 @@
 #include "exec/helper-proto.h"
 #include "exec/translator.h"
 #include "stdlib.h"
+#include "tcg/tcg-cond.h"
 #include "tcg/tcg-op-common.h"
 #include "tcg/tcg-op.h"
 #include "tcg/tcg-temp-internal.h"
@@ -436,8 +437,8 @@ static bool trans_ADD_loc16_ax(DisasContext* ctx, arg_ADD_loc16_ax* a) {
 }
 
 static bool trans_ADD_acc_imm8(DisasContext* ctx, arg_ADD_acc_imm8* a) {
-    TCGv imm8 = tcg_temp_new_i32();
-    TCGv shft = tcg_constant_i32(0);
+    TCGv imm8 = tcg_constant_tl(a->imm8);
+    TCGv shft = tcg_constant_tl(0);
     ADD_TO_ACC_WITH_FLAGS_NO_SXM(imm8, shft)
     tcg_temp_free_i32(imm8);
     tcg_temp_free_i32(shft);
@@ -447,7 +448,7 @@ static bool trans_ADD_acc_imm8(DisasContext* ctx, arg_ADD_acc_imm8* a) {
 
 static bool trans_ADDB_ax_imm8s(DisasContext* ctx, arg_ADDB_ax_imm8s* a) {
     // NOTE: not sure if this is correct
-    TCGv imm8s = tcg_constant_i32(a->imm8s);
+    TCGv imm8s = tcg_constant_tl(a->imm8s);
     tcg_gen_ext8s_tl(imm8s, imm8s);
     TCGv adder_1 = tcg_temp_new_i32();
     TCGv adder_2 = tcg_temp_new_i32();
@@ -1056,6 +1057,101 @@ static bool trans_AND_loc16_imm16s(DisasContext* ctx, arg_AND_loc16_imm16s* a) {
 }
 
 static bool trans_B_offset16_cond(DisasContext* ctx, arg_B_offset16_cond* a) {
+    TCGv cond = tcg_temp_new_i32();
+    gen_test_condition(a->cond, cond, cpu_sr);
+    TCGv baddr = tcg_constant_tl(a->offset16);
+    tcg_gen_ext16s_tl(baddr, baddr);
+    tcg_gen_add_tl(baddr, baddr, cpu_r[C28X_REG_PC]);
+
+    tcg_gen_andi_tl(baddr, baddr, 0x3FFFFF);    // 22 bits PC mask
+
+    IF_CONDi(b_set, TCG_COND_EQ, cond, 1)
+    tcg_gen_mov_tl(cpu_r[C28X_REG_PC], baddr);
+    gen_goto_tb(ctx, 0, ctx->pc + (int16_t)a->offset16);
+    ELSE(b_set)
+    SKIP()
+    ENDIF(b_set)
+
+    tcg_temp_free_i32(cond);
+    tcg_temp_free_i32(baddr);
+
+    ctx->base.is_jmp = DISAS_CHAIN;
+
+    return true;
+}
+
+static bool trans_BANZ_offset16_arn(DisasContext* ctx, arg_BANZ_offset16_arn* a) {
+    TCGv baddr = tcg_constant_tl(a->offset16);
+    tcg_gen_ext16s_tl(baddr, baddr);
+    tcg_gen_add_tl(baddr, baddr, cpu_r[C28X_REG_PC]);
+    tcg_gen_andi_tl(baddr, baddr, 0x3FFFFF);    // 22 bits PC mask
+
+    TCGv arn = tcg_temp_new_i32();
+    tcg_gen_mov_tl(arn, cpu_r[C28X_REG_XAR0 + a->arn]);
+    tcg_gen_andi_tl(arn, arn, 0xffff);
+
+    TCGv flag = tcg_temp_new_i32();
+    tcg_gen_setcondi_tl(TCG_COND_NE, flag, arn, 0);
+
+    tcg_gen_andi_tl(cpu_r[C28X_REG_XAR0 + a->arn], cpu_r[C28X_REG_XAR0 + a->arn], 0xffff0000);
+    tcg_gen_subi_tl(arn, arn, 1);
+    tcg_gen_andi_tl(arn, arn, 0xffff);
+    tcg_gen_or_tl(cpu_r[C28X_REG_XAR0 + a->arn], cpu_r[C28X_REG_XAR0 + a->arn], arn);
+
+    IF_CONDi(b_set, TCG_COND_EQ, flag, 1)
+    tcg_gen_mov_tl(cpu_r[C28X_REG_PC], baddr);
+    gen_goto_tb(ctx, 0, ctx->pc + (int16_t)a->offset16);
+    ELSE(b_set)
+    SKIP()
+    ENDIF(b_set)
+
+    tcg_temp_free_i32(baddr);
+    tcg_temp_free_i32(arn);
+    tcg_temp_free_i32(flag);
+
+    ctx->base.is_jmp = DISAS_CHAIN;
+
+    return true;
+}
+
+static bool trans_BAR_offset16_arn_arm_eq(DisasContext* ctx, arg_BAR_offset16_arn_arm_eq* a) {
+    TCGv baddr = tcg_constant_tl(a->offset16);
+    tcg_gen_ext16s_tl(baddr, baddr);
+    tcg_gen_add_tl(baddr, baddr, cpu_r[C28X_REG_PC]);
+    tcg_gen_andi_tl(baddr, baddr, 0x3FFFFF);    // 22 bits PC mask
+
+    TCGLabel* label_end = gen_new_label();
+
+    tcg_gen_brcond_tl(TCG_COND_EQ, cpu_r[C28X_REG_XAR0 + a->arn], cpu_r[C28X_REG_XAR0 + a->arm], label_end);
+    tcg_gen_mov_tl(cpu_r[C28X_REG_PC], baddr);
+    gen_goto_tb(ctx, 0, ctx->pc + (int16_t)a->offset16);
+    gen_set_label(label_end);
+
+    tcg_temp_free_i32(baddr);
+
+    return true;
+}
+
+static bool trans_BAR_offset16_arn_arm_ne(DisasContext* ctx, arg_BAR_offset16_arn_arm_ne* a) {
+    TCGv baddr = tcg_constant_tl(a->offset16);
+    tcg_gen_ext16s_tl(baddr, baddr);
+    tcg_gen_add_tl(baddr, baddr, cpu_r[C28X_REG_PC]);
+    tcg_gen_andi_tl(baddr, baddr, 0x3FFFFF);    // 22 bits PC mask
+
+    TCGLabel* label_end = gen_new_label();
+
+    tcg_gen_brcond_tl(TCG_COND_NE, cpu_r[C28X_REG_XAR0 + a->arn], cpu_r[C28X_REG_XAR0 + a->arm], label_end);
+    tcg_gen_mov_tl(cpu_r[C28X_REG_PC], baddr);
+    gen_goto_tb(ctx, 0, ctx->pc + (int16_t)a->offset16);
+    gen_set_label(label_end);
+
+    tcg_temp_free_i32(baddr);
+
+    return true;
+}
+
+static bool trans_BF_offset16_cond(DisasContext* ctx, arg_BF_offset16_cond* a) {
+    // treat this as B
     TCGv cond = tcg_temp_new_i32();
     gen_test_condition(a->cond, cond, cpu_sr);
     TCGv baddr = tcg_constant_tl(a->offset16);
