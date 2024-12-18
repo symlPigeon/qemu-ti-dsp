@@ -13,7 +13,8 @@ c28x_ss.add(files(
     'translate.c',
     'helper.c',
     'address-mode.c',
-    'condition.c'
+    'condition.c',
+    'mode-flags.c'
 ))
 
 c28x_system_ss.add(files('machine.c'))

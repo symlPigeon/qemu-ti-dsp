@@ -1,7 +1,7 @@
 #include "condition.h"
 #include "qemu/log-for-trace.h"
 
-void gen_test_condition(uint8_t cond, TCGv result, TCGv* cpu_sr) {
+void c28x_gen_test_condition(uint8_t cond, TCGv result, TCGv* cpu_sr) {
     switch (cond) {
     case 0x0:
         // NEQ  =>  Z=0

@@ -6,7 +6,6 @@
 #include "cpu.h"
 #include "tcg/tcg-op-common.h"
 #include "tcg/tcg-op.h"
-#include "tcg/tcg-temp-internal.h"
 #include "tcg/tcg.h"
 
 #define C28X_MEM_ACCESS_READ  0

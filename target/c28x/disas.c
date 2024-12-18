@@ -3,6 +3,7 @@
 #include "address-mode.h"
 #include "condition.h"
 #include "cpu.h"
+#include "mode-flags.h"
 
 typedef struct DisasContext {
     // Provided by QEMU
@@ -73,6 +74,7 @@ void c28x_print_address(bfd_vma addr, struct disassemble_info* info) {
 #define LOC(x)  c28x_parse_loc_desc(x)
 #define AX(x)   (x) == 1 ? "AH" : "AL"
 #define COND(x) c28x_parse_condition(x)
+#define MODE(x) c28x_parse_mode_flag(x)
 
 INSN(ABS_acc, ABS, "ACC")
 INSN(ABSTC_acc, ABSTC, "ACC")
@@ -118,6 +120,26 @@ INSN(BANZ_offset16_arn, BANZ, "%hd, AR%d--", (int16_t)a->offset16, a->arn)
 INSN(BAR_offset16_arn_arm_eq, BAR, "%hd, AR%d, AR%d, EQ", (int16_t)a->offset16, a->arn, a->arm)
 INSN(BAR_offset16_arn_arm_ne, BAR, "%hd, AR%d, AR%d, NEQ", (int16_t)a->offset16, a->arn, a->arm)
 INSN(BF_offset16_cond, BF, "%s, %hd", COND(a->cond), (int16_t)a->offset16)
+
+INSN(C27MAP, C27MAP, "")
+INSN(C27OBJ, C27OBJ, "")
+INSN(C28ADDR, C28ADDR, "")
+INSN(C28MAP, C28MAP, "")
+INSN(C28OBJ, C28OBJ, "")
+INSN(CLRC_ovc, CLRC, "OVC")
+INSN(CLRC_xf, CLRC, "XF")
+INSN(CLRC_mode, CLRC, "%s", MODE(a->mode))
+
+INSN(CMP_ax_loc16, CMP, "%s, %s", AX(a->ax), LOC(a->loc16))
+INSN(CMP_loc16_imm16s, CMP, "%s, #0x%04x", LOC(a->loc16), a->imm16s)
+INSN(CMP64_acc_p, CMP, "ACC:P")
+INSN(CMPB_ax_imm8, CMPB, "%s, #0x%02x", AX(a->ax), a->imm8s)
+INSN(CMPL_acc_loc32, CMPL, "ACC, %s", LOC(a->loc32))
+INSN(CMPL_acc_p_pm, CMPL, "ACC, P<<PM")
+INSN(CMPR0, CMPR, "0")
+INSN(CMPR3, CMPR, "3")
+
+INSN(CSB_acc, CSB, "ACC")
 
 INSN(MOV_acc_loc16_t, MOV, "ACC, %s << T", LOC(a->loc16))
 INSN(LB_xar7, LB, "XAR7")

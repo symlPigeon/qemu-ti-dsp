@@ -57,7 +57,7 @@
 #define SXM_FLAG          8
 #define ARP_FLAG          9
 #define XF_FLAG           10
-#define MOM1MAP_FLAG      11
+#define M0M1MAP_FLAG      11
 #define OBJMODE_FLAG      12
 #define AMODE_FLAG        13
 #define IDLESTAT_FLAG     14

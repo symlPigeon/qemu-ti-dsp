@@ -35,8 +35,6 @@ static inline void gen_circular_indirect_access_hook(C28xLocDesc* desc) {
     gen_set_label(end_label);
     // ARP = 6
     tcg_gen_movi_tl(desc->cpu_r[ARP_FLAG], 6);
-    tcg_temp_free_i32(xar6_lb);
-    tcg_temp_free_i32(xar1_lb);
 }
 
 #define _C28X_ARP_ACCESS_HOOK_FUNC(name, stmt)                                                                         \
@@ -62,13 +60,11 @@ _C28X_ARP_ACCESS_HOOK_FUNC(gen_arp_add_ar0, {
     TCGv tmp = tcg_temp_new_i32();
     tcg_gen_andi_tl(tmp, desc->cpu_r[C28X_REG_XAR0], 0xFFFF);
     tcg_gen_add_tl(desc->cpu_r[C28X_REG_XAR0 + i], desc->cpu_r[C28X_REG_XAR0 + i], tmp);
-    tcg_temp_free_i32(tmp);
 })
 _C28X_ARP_ACCESS_HOOK_FUNC(gen_arp_sub_ar0, {
     TCGv tmp = tcg_temp_new_i32();
     tcg_gen_andi_tl(tmp, desc->cpu_r[C28X_REG_XAR0], 0xFFFF);
     tcg_gen_sub_tl(desc->cpu_r[C28X_REG_XAR0 + i], desc->cpu_r[C28X_REG_XAR0 + i], tmp);
-    tcg_temp_free_i32(tmp);
 })
 
 void c28x_resolve_loc_desc(C28xLocDesc* desc, TCGv_i32 cpu_r[], TCGv_i32 cpu_sr[], uint8_t loc, uint8_t rw,
@@ -386,8 +382,6 @@ inline static void gen_c28x_loc_rw_direct_access_mode(C28xLocDesc* desc, TCGv re
     tcg_gen_add_tl(addr, addr, desc->offset);
 
     _GENERATE_RW_MEM_CODE
-
-    tcg_temp_free_i32(addr);
 }
 
 inline static void gen_c28x_loc_rw_stack_access_mode(C28xLocDesc* desc, TCGv reg) {
@@ -396,8 +390,6 @@ inline static void gen_c28x_loc_rw_stack_access_mode(C28xLocDesc* desc, TCGv reg
     tcg_gen_andi_tl(addr, addr, 0xFFFF);
 
     _GENERATE_RW_MEM_CODE
-
-    tcg_temp_free_i32(addr);
 }
 
 inline static void gen_c28x_loc_rw_indirect_access_mode(C28xLocDesc* desc, TCGv reg) {
@@ -409,8 +401,6 @@ inline static void gen_c28x_loc_rw_indirect_access_mode(C28xLocDesc* desc, TCGv 
     tcg_gen_add_tl(addr, addr, addr_offset);
 
     _GENERATE_RW_MEM_CODE
-
-    tcg_temp_free_i32(addr);
 }
 
 inline static void gen_c28x_loc_rw_indirect_arp_access_mode(C28xLocDesc* desc, TCGv reg) {
@@ -429,8 +419,6 @@ inline static void gen_c28x_loc_rw_indirect_arp_access_mode(C28xLocDesc* desc, T
     gen_set_label(labels[8]);
 
     _GENERATE_RW_MEM_CODE
-
-    tcg_temp_free_i32(addr);
 }
 
 inline static void gen_c28x_mem_register_access_mode(C28xLocDesc* desc, TCGv reg) {
@@ -455,7 +443,6 @@ inline static void gen_c28x_mem_register_access_h_mode(C28xLocDesc* desc, TCGv r
         tcg_gen_shli_tl(tmp, reg, 16);
         tcg_gen_andi_tl(target_reg, target_reg, 0xFFFF);
         tcg_gen_or_tl(target_reg, target_reg, tmp);
-        tcg_temp_free_i32(tmp);
     }
 }
 
@@ -469,7 +456,6 @@ inline static void gen_c28x_mem_register_access_l_mode(C28xLocDesc* desc, TCGv r
         tcg_gen_andi_tl(tmp, reg, 0xFFFF);
         tcg_gen_andi_tl(target_reg, target_reg, 0xFFFF0000);
         tcg_gen_or_tl(target_reg, target_reg, tmp);
-        tcg_temp_free_i32(tmp);
     }
 }
 

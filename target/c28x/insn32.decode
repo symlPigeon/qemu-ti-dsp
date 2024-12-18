@@ -40,5 +40,7 @@ BAR_offset16_arn_arm_eq 1000 1111 10.. .... .... .... .... ....             @op_
 BAR_offset16_arn_arm_ne 1000 1111 11.. .... .... .... .... ....             @op_arn_arm_offset16
 BF_offset16_cond        0101 0110 1100 .... .... .... .... ....             @op_cond_offset16
 
+CMP_loc16_imm16s        0001 1011 .... .... .... .... .... ....             @op_loc16_s16
+
 MOV_acc_loc16_t         0101 0110 0000 0110 0000 0000 .... ....             @op_acc_loc16
 MOVL_xar0_imm22         1000 1101 00.. .... .... .... .... ....             @op_MOVL_xar0_imm22

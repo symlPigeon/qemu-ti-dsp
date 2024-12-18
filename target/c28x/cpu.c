@@ -33,7 +33,7 @@ static void c28x_cpu_init(Object* obj) {
     // do some init here
     // env->r[C28X_REG_PC] = 0x3FFFC0; // NOTE: PC should be set to 0x3FFFC0, but set to 0 is easier for debug
     env->r[C28X_REG_SP] = 0x0400;
-    env->sr[MOM1MAP_FLAG] = 1;
+    env->sr[M0M1MAP_FLAG] = 1;
     env->sr[VMAP_FLAG] = 1;
     env->sr[DBGM_FLAG] = 1;
     env->sr[INTM_FLAG] = 1;
@@ -79,7 +79,7 @@ static void c28x_cpu_reset(Object* dev, ResetType type) {
     // NOTE: set register status here! For example:
     // env->r[C28X_REG_PC] = 0x3FFFC0; // NOTE: PC should be set to 0x3FFFC0, but set to 0 is easier for debug
     env->r[C28X_REG_SP] = 0x0400;
-    env->sr[MOM1MAP_FLAG] = 1;
+    env->sr[M0M1MAP_FLAG] = 1;
     env->sr[VMAP_FLAG] = 1;
     env->sr[DBGM_FLAG] = 1;
     env->sr[INTM_FLAG] = 1;
@@ -137,7 +137,7 @@ static void c28x_cpu_dump_state(CPUState* cs, FILE* f, int flags) {
     qemu_fprintf(f, "SXM: %s\n", env->sr[SXM_FLAG] != 0 ? "Set" : "Clear");
     qemu_fprintf(f, "ARP --> XAR%d\n", env->sr[ARP_FLAG]);
     qemu_fprintf(f, "XF: %s\n", env->sr[XF_FLAG] != 0 ? "Set" : "Clear");
-    qemu_fprintf(f, "MOM1MAP: %s\n", env->sr[MOM1MAP_FLAG] != 0 ? "Set" : "Clear");
+    qemu_fprintf(f, "MOM1MAP: %s\n", env->sr[M0M1MAP_FLAG] != 0 ? "Set" : "Clear");
     qemu_fprintf(f, "OBJMODE: %s\n", env->sr[OBJMODE_FLAG] != 0 ? "C28x Obj" : "C27x Obj");
     qemu_fprintf(f, "AMODE: %s\n", env->sr[AMODE_FLAG] != 0 ? "1" : "0");
     qemu_fprintf(f, "IDLESTAT: %s\n", env->sr[IDLESTAT_FLAG] != 0 ? "Idle" : "Active");

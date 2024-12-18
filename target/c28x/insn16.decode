@@ -8,6 +8,7 @@
 &ax_shft             ax shft
 &ax                  ax
 &shft                shft
+&mode                mode
 
 @op_ADDB_xarn_imm7   .... . xarn:3 . imm7:7                        &xarn_imm7
 @op_loc16            .... .... loc16:8                             &loc16
@@ -19,6 +20,7 @@
 @op_ax_shft          .... .... ... ax:1 shft:4                     &ax_shft
 @op_ax               .... .... .... ... ax:1                       &ax
 @op_shft             .... .... .... shft:4                         &shft
+@op_mode             .... .... mode:8                              &mode
 
 ABS_acc              1111 1111 0101 0110
 ABSTC_acc            0101 0110 0101 1111
@@ -47,5 +49,24 @@ ASR_ax_t             1111 1111 0110 010.                           @op_ax
 ASR64_acc_p_shft     0101 0110 1000 ....                           @op_shft
 ASR64_acc_p_t        0101 0110 0010 1100
 ASRL_acc_t           0101 0110 0001 0000
+
+C27MAP               0101 0110 0011 1111
+C27OBJ               0101 0110 0011 0110
+C28ADDR              0101 0110 0001 0110
+C28MAP               0101 0110 0001 1010
+C28OBJ               0101 0110 0001 1111
+CLRC_ovc             0101 0110 0101 1100
+CLRC_xf              0101 0110 0001 1011
+CLRC_mode            0010 1001 .... ....                           @op_mode
+
+CMP_ax_loc16         0101 010. .... ....                           @op_ax_loc16
+CMP64_acc_p          0101 0110 0101 1110
+CMPB_ax_imm8         0101 001. .... ....                           @op_ax_imm8s
+CMPL_acc_loc32       0000 1111 .... ....                           @op_loc32
+CMPL_acc_p_pm        1111 1111 0101 1001 
+CMPR0                0101 0110 0001 1101
+CMPR3                0101 0110 0001 1100
+
+CSB_acc              0101 0110 0011 0101
 
 LB_xar7              0111 0110 0010 0000
