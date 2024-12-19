@@ -186,10 +186,16 @@ inline static void watch_for_overflow(TCGv_i32 ret, TCGv_i32 val1, TCGv_i32 val2
 }
 
 // C28x address mode
-#define C28X_READ_LOC16(loc, reg)  C28X_RESOLVE_LOC(loc, reg, cpu_r, cpu_sr, C28X_MEM_ACCESS_READ, C28X_LOC_16)
-#define C28X_READ_LOC32(loc, reg)  C28X_RESOLVE_LOC(loc, reg, cpu_r, cpu_sr, C28X_MEM_ACCESS_READ, C28X_LOC_32)
-#define C28X_WRITE_LOC16(loc, reg) C28X_RESOLVE_LOC(loc, reg, cpu_r, cpu_sr, C28X_MEM_ACCESS_WRITE, C28X_LOC_16)
-#define C28X_WRITE_LOC32(loc, reg) C28X_RESOLVE_LOC(loc, reg, cpu_r, cpu_sr, C28X_MEM_ACCESS_WRITE, C28X_LOC_32)
+#define C28X_READ_LOC16(loc, reg)  C28X_RESOLVE_LOC(loc, reg, cpu_r, cpu_sr, C28X_MEM_ACCESS_READ, C28X_LOC_16, 0)
+#define C28X_READ_LOC32(loc, reg)  C28X_RESOLVE_LOC(loc, reg, cpu_r, cpu_sr, C28X_MEM_ACCESS_READ, C28X_LOC_32, 0)
+#define C28X_WRITE_LOC16(loc, reg) C28X_RESOLVE_LOC(loc, reg, cpu_r, cpu_sr, C28X_MEM_ACCESS_WRITE, C28X_LOC_16, 0)
+#define C28X_WRITE_LOC32(loc, reg) C28X_RESOLVE_LOC(loc, reg, cpu_r, cpu_sr, C28X_MEM_ACCESS_WRITE, C28X_LOC_32, 0)
+
+// C28x Read and Write address mode
+#define C28X_READ_LOC16_RMW(loc, reg)  C28X_RESOLVE_LOC(loc, reg, cpu_r, cpu_sr, C28X_MEM_ACCESS_READ, C28X_LOC_16, 1)
+#define C28X_READ_LOC32_RMW(loc, reg)  C28X_RESOLVE_LOC(loc, reg, cpu_r, cpu_sr, C28X_MEM_ACCESS_READ, C28X_LOC_32, 1)
+#define C28X_WRITE_LOC16_RMW(loc, reg) C28X_RESOLVE_LOC(loc, reg, cpu_r, cpu_sr, C28X_MEM_ACCESS_WRITE, C28X_LOC_16, 1)
+#define C28X_WRITE_LOC32_RMW(loc, reg) C28X_RESOLVE_LOC(loc, reg, cpu_r, cpu_sr, C28X_MEM_ACCESS_WRITE, C28X_LOC_32, 1)
 
 // Sign extend value
 #define SXM_EXTEND(val)                                                                                                \
@@ -382,7 +388,7 @@ static bool trans_ADD_ax_loc16(DisasContext* ctx, arg_ADD_ax_loc16* a) {
 static bool trans_ADD_loc16_ax(DisasContext* ctx, arg_ADD_loc16_ax* a) {
     // so this should be a read-modify-write operation
     TCGv target_value = tcg_temp_new_i32();
-    C28X_READ_LOC16(a->loc16, target_value);
+    C28X_READ_LOC16_RMW(a->loc16, target_value);
 
     TCGv adder_1 = tcg_temp_new_i32();
     TCGv adder_2 = tcg_temp_new_i32();
@@ -399,7 +405,7 @@ static bool trans_ADD_loc16_ax(DisasContext* ctx, arg_ADD_loc16_ax* a) {
     tcg_gen_add_tl(add_sum, adder_1, adder_2);
     TCGv add_sum_16 = tcg_temp_new_i32();
     tcg_gen_andi_tl(add_sum_16, add_sum, 0xffff);
-    C28X_WRITE_LOC16(a->loc16, add_sum_16);
+    C28X_WRITE_LOC16_RMW(a->loc16, add_sum_16);
 
     gen_flag_add_loc16(add_sum, adder_1, adder_2);
 
@@ -525,7 +531,7 @@ static bool trans_AND_acc_loc16(DisasContext* ctx, arg_AND_acc_loc16* a) {
 static bool trans_AND_loc16_ax(DisasContext* ctx, arg_AND_loc16_ax* a) {
     TCGv target_value = tcg_temp_new_i32();
     TCGv ax = tcg_temp_new_i32();
-    C28X_READ_LOC16(a->loc16, target_value);
+    C28X_READ_LOC16_RMW(a->loc16, target_value);
     if (a->ax == 1) {
         // AH
         tcg_gen_shri_tl(ax, cpu_r[C28X_REG_ACC], 16);
@@ -535,7 +541,7 @@ static bool trans_AND_loc16_ax(DisasContext* ctx, arg_AND_loc16_ax* a) {
     }
     TCGv result = tcg_temp_new_i32();
     tcg_gen_and_tl(result, target_value, ax);
-    C28X_WRITE_LOC16(a->loc16, result);
+    C28X_WRITE_LOC16_RMW(a->loc16, result);
     tcg_gen_setcondi_tl(TCG_COND_EQ, cpu_sr[Z_FLAG], result, 0);
     tcg_gen_shri_tl(cpu_sr[N_FLAG], result, 15);
 
@@ -1002,7 +1008,7 @@ static bool trans_CSB_acc(DisasContext* ctx, arg_CSB_acc* a) {
 
 static bool trans_DEC_loc16(DisasContext* ctx, arg_DEC_loc16* a) {
     TCGv target_value = tcg_temp_new_i32();
-    C28X_READ_LOC16(a->loc16, target_value);
+    C28X_READ_LOC16_RMW(a->loc16, target_value);
     tcg_gen_ext16s_tl(target_value, target_value);
     tcg_gen_setcondi_tl(TCG_COND_NE, cpu_sr[C_FLAG], target_value, 0);    // borrow => clear c_flag
     tcg_gen_setcondi_tl(TCG_COND_EQ, cpu_sr[V_FLAG], target_value, 0);    // overflow iff loc16 == 1
@@ -1010,7 +1016,7 @@ static bool trans_DEC_loc16(DisasContext* ctx, arg_DEC_loc16* a) {
     tcg_gen_setcondi_tl(TCG_COND_LT, cpu_sr[N_FLAG], target_value, 1);    // negative iff loc16 < 1
     tcg_gen_subi_tl(target_value, target_value, 1);
     tcg_gen_andi_tl(target_value, target_value, 0xffff);
-    C28X_WRITE_LOC16(a->loc16, target_value);
+    C28X_WRITE_LOC16_RMW(a->loc16, target_value);
 
     return true;
 }
@@ -1092,7 +1098,7 @@ static bool trans_ADD_acc_loc16_shft(DisasContext* ctx, arg_ADD_acc_loc16_shft* 
 
 static bool trans_ADD_loc16_s16(DisasContext* ctx, arg_ADD_loc16_s16* a) {
     TCGv target_value = tcg_temp_new_i32();
-    C28X_READ_LOC16(a->loc16, target_value);
+    C28X_READ_LOC16_RMW(a->loc16, target_value);
     TCGv imm16 = tcg_constant_i32(a->imm16s);
 
     TCGv adder_1 = tcg_temp_new_i32();
@@ -1109,7 +1115,7 @@ static bool trans_ADD_loc16_s16(DisasContext* ctx, arg_ADD_loc16_s16* a) {
 
     TCGv store_value = tcg_temp_new_i32();
     tcg_gen_andi_tl(store_value, add_sum, 0xffff);
-    C28X_WRITE_LOC16(a->loc16, store_value);
+    C28X_WRITE_LOC16_RMW(a->loc16, store_value);
 
     TCGv overflow_1 = tcg_temp_new_i32();
     tcg_gen_xor_tl(overflow_1, adder_1, adder_2);
@@ -1123,7 +1129,7 @@ static bool trans_ADD_loc16_s16(DisasContext* ctx, arg_ADD_loc16_s16* a) {
 
 static bool trans_ADDL_loc32_acc(DisasContext* ctx, arg_ADDL_loc32_acc* a) {
     TCGv target_value = tcg_temp_new_i32();
-    C28X_READ_LOC32(a->loc32, target_value);
+    C28X_READ_LOC32_RMW(a->loc32, target_value);
 
     TCGv adder_1 = tcg_temp_new_i32();
     TCGv adder_2 = tcg_temp_new_i32();
@@ -1137,7 +1143,7 @@ static bool trans_ADDL_loc32_acc(DisasContext* ctx, arg_ADDL_loc32_acc* a) {
     watch_for_overflow(add_sum, adder_1, adder_2, OP_ADD_I32);
     gen_set_z_flag(add_sum);
     gen_set_n_flag(add_sum);
-    C28X_WRITE_LOC32(a->loc32, add_sum);
+    C28X_WRITE_LOC32_RMW(a->loc32, add_sum);
 
     return true;
 }
@@ -1198,9 +1204,9 @@ static bool trans_AND_ax_loc16_imm16(DisasContext* ctx, arg_AND_ax_loc16_imm16* 
 static bool trans_AND_loc16_imm16s(DisasContext* ctx, arg_AND_loc16_imm16s* a) {
     // [loc16] = [loc16] AND 16bit
     TCGv target_value = tcg_temp_new_i32();
-    C28X_READ_LOC16(a->loc16, target_value);
+    C28X_READ_LOC16_RMW(a->loc16, target_value);
     tcg_gen_andi_tl(target_value, target_value, a->imm16s);
-    C28X_WRITE_LOC16(a->loc16, target_value);
+    C28X_WRITE_LOC16_RMW(a->loc16, target_value);
 
     tcg_gen_setcondi_tl(TCG_COND_EQ, cpu_sr[Z_FLAG], target_value, 0);
     tcg_gen_shri_tl(cpu_sr[N_FLAG], target_value, 15);
