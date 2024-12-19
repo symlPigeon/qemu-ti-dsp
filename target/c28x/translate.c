@@ -1000,6 +1000,21 @@ static bool trans_CSB_acc(DisasContext* ctx, arg_CSB_acc* a) {
     return true;
 }
 
+static bool trans_DEC_loc16(DisasContext* ctx, arg_DEC_loc16* a) {
+    TCGv target_value = tcg_temp_new_i32();
+    C28X_READ_LOC16(a->loc16, target_value);
+    tcg_gen_ext16s_tl(target_value, target_value);
+    tcg_gen_setcondi_tl(TCG_COND_NE, cpu_sr[C_FLAG], target_value, 0);    // borrow => clear c_flag
+    tcg_gen_setcondi_tl(TCG_COND_EQ, cpu_sr[V_FLAG], target_value, 0);    // overflow iff loc16 == 1
+    tcg_gen_setcondi_tl(TCG_COND_EQ, cpu_sr[Z_FLAG], target_value, 1);    // zero iff loc16 == 1
+    tcg_gen_setcondi_tl(TCG_COND_LT, cpu_sr[N_FLAG], target_value, 1);    // negative iff loc16 < 1
+    tcg_gen_subi_tl(target_value, target_value, 1);
+    tcg_gen_andi_tl(target_value, target_value, 0xffff);
+    C28X_WRITE_LOC16(a->loc16, target_value);
+
+    return true;
+}
+
 static bool trans_LB_xar7(DisasContext* ctx, arg_LB_xar7* a) {
     // No flags and modes
     TCGv baddr = tcg_temp_new_i32();
@@ -1009,6 +1024,17 @@ static bool trans_LB_xar7(DisasContext* ctx, arg_LB_xar7* a) {
 
     ctx->base.is_jmp = DISAS_LOOKUP;
 
+    return true;
+}
+
+static bool trans_SETC_mode(DisasContext* ctx, arg_SETC_mode* a) {
+    C28X_SETC_MODE(cpu_sr, a->mode);
+
+    return true;
+}
+
+static bool trans_SETC_xf(DisasContext* ctx, arg_SETC_xf* a) {
+    tcg_gen_movi_tl(cpu_sr[XF_FLAG], 1);
     return true;
 }
 
