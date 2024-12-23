@@ -266,6 +266,36 @@ inline static void gen_and_dst(TCGv dst, TCGv mask, bool check_flag) {
     }
 }
 
+#define REG_T(name, lsb)                                                                                               \
+    TCGv name = tcg_temp_new_i32();                                                                                    \
+    tcg_gen_shri_tl(name, cpu_r[C28X_REG_XT], 16);                                                                     \
+    tcg_gen_andi_tl(name, name, (1 << lsb) - 1);
+
+#define REG_AX_R(name, AX)                                                                                             \
+    TCGv name = tcg_temp_new_i32();                                                                                    \
+    if (AX)                                                                                                            \
+        tcg_gen_shri_tl(name, cpu_r[C28X_REG_ACC], 16);                                                                \
+    else                                                                                                               \
+        tcg_gen_andi_tl(name, cpu_r[C28X_REG_ACC], 0xffff);
+
+#define REG_AX_W(value, AX)                                                                                            \
+    if (AX) {                                                                                                          \
+        tcg_gen_andi_tl(cpu_r[C28X_REG_ACC], cpu_r[C28X_REG_ACC], 0x0000ffff);                                         \
+        tcg_gen_shli_tl(value, value, 16);                                                                             \
+        tcg_gen_or_tl(cpu_r[C28X_REG_ACC], cpu_r[C28X_REG_ACC], value);                                                \
+    } else {                                                                                                           \
+        tcg_gen_andi_tl(value, value, 0xffff);                                                                         \
+        tcg_gen_andi_tl(cpu_r[C28X_REG_ACC], cpu_r[C28X_REG_ACC], 0xffff0000);                                         \
+        tcg_gen_or_tl(cpu_r[C28X_REG_ACC], cpu_r[C28X_REG_ACC], value);                                                \
+    }
+
+#define LSL_TARGET_SHFT(dst, shft)                                                                                     \
+    tcg_gen_shl_tl(dst, dst, shft);                                                                                    \
+    tcg_gen_shri_tl(cpu_sr[C_FLAG], dst, 31);                                                                          \
+    tcg_gen_shli_tl(dst, dst, 1);                                                                                      \
+    tcg_gen_setcondi_tl(TCG_COND_EQ, cpu_sr[Z_FLAG], dst, 0);                                                          \
+    tcg_gen_setcondi_tl(TCG_COND_LT, cpu_sr[N_FLAG], dst, 0);
+
 #include "decode-insn16.c.inc"
 
 // ==============================================
@@ -530,15 +560,8 @@ static bool trans_AND_acc_loc16(DisasContext* ctx, arg_AND_acc_loc16* a) {
 
 static bool trans_AND_loc16_ax(DisasContext* ctx, arg_AND_loc16_ax* a) {
     TCGv target_value = tcg_temp_new_i32();
-    TCGv ax = tcg_temp_new_i32();
     C28X_READ_LOC16_RMW(a->loc16, target_value);
-    if (a->ax == 1) {
-        // AH
-        tcg_gen_shri_tl(ax, cpu_r[C28X_REG_ACC], 16);
-    } else {
-        // AL
-        tcg_gen_andi_tl(ax, cpu_r[C28X_REG_ACC], 0xffff);
-    }
+    REG_AX_R(ax, a->ax);
     TCGv result = tcg_temp_new_i32();
     tcg_gen_and_tl(result, target_value, ax);
     C28X_WRITE_LOC16_RMW(a->loc16, result);
@@ -617,12 +640,7 @@ static bool trans_ASR_ax_shft(DisasContext* ctx, arg_ASR_ax_shft* a) {
     // shift value is a->shft + 1
     // for example, ffa0 => ASR AL, 1
     // we should take last out bit as C_FLAG
-    TCGv value = tcg_temp_new_i32();
-    if (a->ax == 1) {
-        tcg_gen_shri_tl(value, cpu_r[C28X_REG_ACC], 16);
-    } else {
-        tcg_gen_andi_tl(value, cpu_r[C28X_REG_ACC], 0xffff);
-    }
+    REG_AX_R(value, a->ax);
     // sign extend
     tcg_gen_ext16s_tl(value, value);
     // Now LSB of value is the C_FLAG, which is the last bit out
@@ -636,36 +654,21 @@ static bool trans_ASR_ax_shft(DisasContext* ctx, arg_ASR_ax_shft* a) {
     tcg_gen_shri_tl(cpu_sr[N_FLAG], value, 15);
 
     // write back to AH / AL
-    if (a->ax == 1) {
-        tcg_gen_andi_tl(cpu_r[C28X_REG_ACC], cpu_r[C28X_REG_ACC], 0x0000ffff);
-        tcg_gen_shli_tl(value, value, 16);
-        tcg_gen_or_tl(cpu_r[C28X_REG_ACC], cpu_r[C28X_REG_ACC], value);
-    } else {
-        tcg_gen_andi_tl(cpu_r[C28X_REG_ACC], cpu_r[C28X_REG_ACC], 0xffff0000);
-        tcg_gen_or_tl(cpu_r[C28X_REG_ACC], cpu_r[C28X_REG_ACC], value);
-    }
+    REG_AX_W(value, a->ax);
 
     return true;
 }
 
 static bool trans_ASR_ax_t(DisasContext* ctx, arg_ASR_ax_t* a) {
     TCGLabel* label_end = gen_new_label();
-    TCGv value = tcg_temp_new_i32();
-    TCGv t = tcg_temp_new_i32();
-
-    tcg_gen_shri_tl(t, cpu_r[C28X_REG_XT], 16);
-    tcg_gen_andi_tl(t, t, 0xf);    // 0..15
+    REG_T(t, 4);    // 0..15
     // if t == 0 then clear this flag, else C_FLAG will be set later
     tcg_gen_mov_tl(cpu_sr[C_FLAG], t);
     // t == 0 do nothing
     tcg_gen_brcondi_tl(TCG_COND_EQ, t, 0, label_end);
     tcg_gen_subi_tl(t, t, 1);    // fuck me
 
-    if (a->ax == 1) {
-        tcg_gen_shri_tl(value, cpu_r[C28X_REG_ACC], 16);
-    } else {
-        tcg_gen_andi_tl(value, cpu_r[C28X_REG_ACC], 0xffff);
-    }
+    REG_AX_R(value, a->ax);
 
     tcg_gen_ext16s_tl(value, value);
     tcg_gen_shr_tl(value, value, t);
@@ -675,14 +678,7 @@ static bool trans_ASR_ax_t(DisasContext* ctx, arg_ASR_ax_t* a) {
     tcg_gen_setcondi_tl(TCG_COND_EQ, cpu_sr[Z_FLAG], value, 0);
     tcg_gen_shri_tl(cpu_sr[N_FLAG], value, 15);
 
-    if (a->ax == 1) {
-        tcg_gen_andi_tl(cpu_r[C28X_REG_ACC], cpu_r[C28X_REG_ACC], 0x0000ffff);
-        tcg_gen_shli_tl(value, value, 16);
-        tcg_gen_or_tl(cpu_r[C28X_REG_ACC], cpu_r[C28X_REG_ACC], value);
-    } else {
-        tcg_gen_andi_tl(cpu_r[C28X_REG_ACC], cpu_r[C28X_REG_ACC], 0xffff0000);
-        tcg_gen_or_tl(cpu_r[C28X_REG_ACC], cpu_r[C28X_REG_ACC], value);
-    }
+    REG_AX_W(value, a->ax);
 
     gen_set_label(label_end);
 
@@ -718,7 +714,7 @@ static bool trans_ASR64_acc_p_shft(DisasContext* ctx, arg_ASR64_acc_p_shft* a) {
 static bool trans_ASR64_acc_p_t(DisasContext* ctx, arg_ASR64_acc_p_t* a) {
     TCGLabel* label_end = gen_new_label();
 
-    TCGv shft = tcg_temp_new_i32();
+    REG_T(shft, 6);
     TCGv shft_value = tcg_temp_new_i32();
     TCGv last_out_bit = tcg_temp_new_i32();
     TCGv mask = tcg_constant_tl(1);
@@ -728,8 +724,6 @@ static bool trans_ASR64_acc_p_t(DisasContext* ctx, arg_ASR64_acc_p_t* a) {
     TCGv p_zero = tcg_temp_new_i32();
     TCGv width = tcg_constant_tl(31);
 
-    tcg_gen_shri_tl(shft, cpu_r[C28X_REG_XT], 16);
-    tcg_gen_andi_tl(shft, shft, 0x1f);    // 0.. 63
     tcg_gen_mov_tl(cpu_sr[C_FLAG], shft);
     tcg_gen_brcondi_tl(TCG_COND_EQ, shft, 0, label_end);
     tcg_gen_subi_tl(shft, shft, 1);
@@ -763,9 +757,7 @@ static bool trans_ASR64_acc_p_t(DisasContext* ctx, arg_ASR64_acc_p_t* a) {
 static bool trans_ASRL_acc_t(DisasContext* ctx, arg_ASRL_acc_t* a) {
     TCGLabel* label_end = gen_new_label();
 
-    TCGv shft = tcg_temp_new_i32();
-    tcg_gen_shri_tl(shft, cpu_r[C28X_REG_XT], 16);
-    tcg_gen_andi_tl(shft, shft, 0x1f);    // 0.. 31
+    REG_T(shft, 5);
 
     tcg_gen_mov_tl(cpu_sr[C_FLAG], shft);
     tcg_gen_brcondi_tl(TCG_COND_EQ, shft, 0, label_end);
@@ -836,12 +828,7 @@ static bool trans_CMP_ax_loc16(DisasContext* ctx, arg_CMP_ax_loc16* a) {
     // Set flags on (AX - [loc16])
     TCGv loc_value = tcg_temp_new_i32();
     C28X_READ_LOC16(a->loc16, loc_value);
-    TCGv ax_value = tcg_temp_new_i32();
-    if (a->ax == 1) {
-        tcg_gen_shri_tl(ax_value, cpu_r[C28X_REG_ACC], 16);
-    } else {
-        tcg_gen_andi_tl(ax_value, cpu_r[C28X_REG_ACC], 0xffff);
-    }
+    REG_AX_R(ax_value, a->ax);
     TCGv result = tcg_temp_new_i32();
     // signed expand to 32bit
     tcg_gen_ext16s_tl(loc_value, loc_value);
@@ -879,12 +866,7 @@ static bool trans_CMP64_acc_p(DisasContext* ctx, arg_CMP64_acc_p* a) {
 }
 
 static bool trans_CMPB_ax_imm8(DisasContext* ctx, arg_CMPB_ax_imm8* a) {
-    TCGv ax_value = tcg_temp_new_i32();
-    if (a->ax == 1) {
-        tcg_gen_shri_tl(ax_value, cpu_r[C28X_REG_ACC], 16);
-    } else {
-        tcg_gen_andi_tl(ax_value, cpu_r[C28X_REG_ACC], 0xffff);
-    }
+    REG_AX_R(ax_value, a->ax);
     TCGv imm8 = tcg_constant_tl(a->imm8s);
     tcg_gen_ext8u_tl(imm8, imm8);
     tcg_gen_ext16u_tl(ax_value, ax_value);
@@ -1034,50 +1016,29 @@ static bool trans_EDIS(DisasContext* ctx, arg_EDIS* a) {
 static bool trans_FLIP_ax(DisasContext* ctx, arg_FLIP_ax* a) {
     // Bit reverse the contents of ax
     //  SWAR divide-and-conquer
-    TCGv ax = tcg_temp_new_i32();
-    if (a->ax == 1) {
-        tcg_gen_shri_tl(ax, cpu_r[C28X_REG_ACC], 16);
-    } else {
-        tcg_gen_andi_tl(ax, cpu_r[C28X_REG_ACC], 0xffff);
-    }
+    REG_AX_R(b, a->ax);
+
     TCGv b_left = tcg_temp_new_i32();
     TCGv b_right = tcg_temp_new_i32();
-    TCGv b = tcg_temp_new_i32();
-    tcg_gen_mov_tl(b, ax);
+
+#define SWAR_ROUND(l, r, s)                                                                                            \
+    tcg_gen_andi_tl(b_right, b, r);                                                                                    \
+    tcg_gen_shri_tl(b_right, b_right, s);                                                                              \
+    tcg_gen_andi_tl(b_left, b, l);                                                                                     \
+    tcg_gen_shli_tl(b_left, b_left, s);                                                                                \
+    tcg_gen_or_tl(b, b_right, b_left);
     // round 1: b = (b & 0xff00) >> 8 | (b & 0x00ff) << 8
-    tcg_gen_andi_tl(b_right, b, 0xff00);
-    tcg_gen_shri_tl(b_right, b_right, 8);
-    tcg_gen_andi_tl(b_left, b, 0x00ff);
-    tcg_gen_shli_tl(b_left, b_left, 8);
-    tcg_gen_or_tl(b, b_right, b_left);
+    SWAR_ROUND(0xff00, 0x00ff, 8);
     // round 2: b = (b & 0xf0f0) >> 4 | (b & 0x0f0f) << 4
-    tcg_gen_andi_tl(b_right, b, 0xf0f0);
-    tcg_gen_shri_tl(b_right, b_right, 4);
-    tcg_gen_andi_tl(b_left, b, 0x0f0f);
-    tcg_gen_shli_tl(b_left, b_left, 4);
-    tcg_gen_or_tl(b, b_right, b_left);
+    SWAR_ROUND(0xf0f0, 0x0f0f, 4);
     // round 3: b = (b & 0xcccc) >> 2 | (b & 0x3333) << 2
-    tcg_gen_andi_tl(b_right, b, 0xcccc);
-    tcg_gen_shri_tl(b_right, b_right, 2);
-    tcg_gen_andi_tl(b_left, b, 0x3333);
-    tcg_gen_shli_tl(b_left, b_left, 2);
-    tcg_gen_or_tl(b, b_right, b_left);
+    SWAR_ROUND(0xcccc, 0x3333, 2);
     // round 4: b = (b & 0xaaaa) >> 1 | (b & 0x5555) << 1
-    tcg_gen_andi_tl(b_right, b, 0xaaaa);
-    tcg_gen_shri_tl(b_right, b_right, 1);
-    tcg_gen_andi_tl(b_left, b, 0x5555);
-    tcg_gen_shli_tl(b_left, b_left, 1);
-    tcg_gen_or_tl(b, b_right, b_left);
+    SWAR_ROUND(0xaaaa, 0x5555, 1);
+#undef SWAR_ROUND
 
     // write back
-    if (a->ax == 1) {
-        tcg_gen_andi_tl(cpu_r[C28X_REG_ACC], cpu_r[C28X_REG_ACC], 0x0000ffff);
-        tcg_gen_shli_tl(b, b, 16);
-        tcg_gen_or_tl(cpu_r[C28X_REG_ACC], cpu_r[C28X_REG_ACC], b);
-    } else {
-        tcg_gen_andi_tl(cpu_r[C28X_REG_ACC], cpu_r[C28X_REG_ACC], 0xffff0000);
-        tcg_gen_or_tl(cpu_r[C28X_REG_ACC], cpu_r[C28X_REG_ACC], b);
-    }
+    REG_AX_W(b, a->ax);
 
     return true;
 }
@@ -1202,6 +1163,30 @@ static bool trans_LRETR(DisasContext* ctx, arg_LRETR* a) {
     tcg_gen_shli_tl(ret_pc_hi, ret_pc_hi, 16);
     tcg_gen_or_tl(cpu_r[C28X_REG_RPC], cpu_r[C28X_REG_RPC], ret_pc_hi);
 
+    return true;
+}
+
+static bool trans_LSL_acc_shft(DisasContext* ctx, arg_LSL_acc_shft* a) {
+    TCGv shft = tcg_constant_tl(a->shft);
+    LSL_TARGET_SHFT(cpu_r[C28X_REG_ACC], shft);
+    return true;
+}
+
+static bool trans_LSL_acc_t(DisasContext* ctx, arg_LSL_acc_t* a) {
+    REG_T(shft, 4);
+    LSL_TARGET_SHFT(cpu_r[C28X_REG_ACC], shft);
+    return true;
+}
+
+static bool trans_LSL_ax_shft(DisasContext* ctx, arg_LSL_ax_shft* a) {
+    REG_AX_R(ax, a->ax);
+    TCGv value = tcg_temp_new_i32();
+    tcg_gen_shli_tl(value, ax, 16);
+    tcg_gen_or_tl(value, value, ax);    // duplicate ax so 32-bit LSL will work for 16-bit ax
+    TCGv shft = tcg_constant_tl(a->shft);
+    LSL_TARGET_SHFT(ax, shft);
+    tcg_gen_andi_tl(ax, ax, 0xffff);
+    REG_AX_W(ax, a->ax);
     return true;
 }
 

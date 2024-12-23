@@ -90,6 +90,10 @@ LRET                 0111 0110 0001 0100
 LRETE                0111 0110 0001 0000
 LRETR                0000 0000 0000 0110
 
+LSL_acc_shft         1111 1111 0011 ....                           @op_shft
+LSL_acc_t            1111 1111 0101 0000
+LSL_ax_shft          1111 1111 100. ....                           @op_ax_shft
+
 SETC_mode            0011 1011 .... ....                           @op_mode
 SETC_xf              0101 0110 0010 0110
 
