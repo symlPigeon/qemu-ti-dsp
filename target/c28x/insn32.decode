@@ -10,7 +10,7 @@
 &arn_offset16           arn offset16
 &arn_arm_offset16       arn arm offset16
 
-@op_MOVL_xar0_imm22     .... .... .. imm22:22                               &imm22
+@op_imm22               .... .... .. imm22:22                               &imm22
 @op_shft_imm16          .... .... .... shft:4 imm16:16                      &shft_imm16
 @op_acc_loc16           .... .... .... .... .... .... loc16:8               &loc16
 @op_loc16_s16           .... .... loc16:8 imm16s:16                         &loc16_s16
@@ -42,5 +42,11 @@ BF_offset16_cond        0101 0110 1100 .... .... .... .... ....             @op_
 
 CMP_loc16_imm16s        0001 1011 .... .... .... .... .... ....             @op_loc16_s16
 
+FFC_xar7_imm22          0000 0000 11.. .... .... .... .... ....             @op_imm22
+
+LB_imm22                0000 0000 01.. .... .... .... .... ....             @op_imm22
+LC_imm22                0000 0000 10.. .... .... .... .... ....             @op_imm22
+LCR_imm22               0111 0110 01.. .... .... .... .... ....             @op_imm22
+
 MOV_acc_loc16_t         0101 0110 0000 0110 0000 0000 .... ....             @op_acc_loc16
-MOVL_xar0_imm22         1000 1101 00.. .... .... .... .... ....             @op_MOVL_xar0_imm22
+MOVL_xar0_imm22         1000 1101 00.. .... .... .... .... ....             @op_imm22

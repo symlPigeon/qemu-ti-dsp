@@ -9,6 +9,7 @@
 &ax                  ax
 &shft                shft
 &mode                mode
+&xarn                xarn
 
 @op_ADDB_xarn_imm7   .... . xarn:3 . imm7:7                        &xarn_imm7
 @op_loc16            .... .... loc16:8                             &loc16
@@ -21,6 +22,7 @@
 @op_ax               .... .... .... ... ax:1                       &ax
 @op_shft             .... .... .... shft:4                         &shft
 @op_mode             .... .... mode:8                              &mode
+@op_xarn             .... .... .... . xarn:3                       &xarn
 
 ABS_acc              1111 1111 0101 0110
 ABSTC_acc            0101 0110 0101 1111
@@ -71,7 +73,23 @@ CSB_acc              0101 0110 0011 0101
 
 DEC_loc16            0000 1011 .... ....                           @op_loc16
 
+EALLOW               0111 0110 0010 0010
+EDIS                 0111 0110 0001 1010
+
+FLIP_ax              0101 0110 0111 000.                           @op_ax
+
+INC_loc16            0000 1010 .... ....                           @op_loc16
+
+LB_xar7              0111 0110 0010 0000
+LC_xar7              0111 0110 0000 0100
+LCR_xarn             0011 1110 0110 0...                           @op_xarn
+
+LPADDR               0101 0110 0001 1110
+
+LRET                 0111 0110 0001 0100
+LRETE                0111 0110 0001 0000
+LRETR                0000 0000 0000 0110
+
 SETC_mode            0011 1011 .... ....                           @op_mode
 SETC_xf              0101 0110 0010 0110
 
-LB_xar7              0111 0110 0010 0000

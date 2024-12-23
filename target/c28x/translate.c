@@ -1021,14 +1021,186 @@ static bool trans_DEC_loc16(DisasContext* ctx, arg_DEC_loc16* a) {
     return true;
 }
 
+static bool trans_EALLOW(DisasContext* ctx, arg_EALLOW* a) {
+    tcg_gen_movi_tl(cpu_sr[EALLOW_FLAG], 1);
+    return true;
+}
+
+static bool trans_EDIS(DisasContext* ctx, arg_EDIS* a) {
+    tcg_gen_movi_tl(cpu_sr[EALLOW_FLAG], 0);
+    return true;
+}
+
+static bool trans_FLIP_ax(DisasContext* ctx, arg_FLIP_ax* a) {
+    // Bit reverse the contents of ax
+    //  SWAR divide-and-conquer
+    TCGv ax = tcg_temp_new_i32();
+    if (a->ax == 1) {
+        tcg_gen_shri_tl(ax, cpu_r[C28X_REG_ACC], 16);
+    } else {
+        tcg_gen_andi_tl(ax, cpu_r[C28X_REG_ACC], 0xffff);
+    }
+    TCGv b_left = tcg_temp_new_i32();
+    TCGv b_right = tcg_temp_new_i32();
+    TCGv b = tcg_temp_new_i32();
+    tcg_gen_mov_tl(b, ax);
+    // round 1: b = (b & 0xff00) >> 8 | (b & 0x00ff) << 8
+    tcg_gen_andi_tl(b_right, b, 0xff00);
+    tcg_gen_shri_tl(b_right, b_right, 8);
+    tcg_gen_andi_tl(b_left, b, 0x00ff);
+    tcg_gen_shli_tl(b_left, b_left, 8);
+    tcg_gen_or_tl(b, b_right, b_left);
+    // round 2: b = (b & 0xf0f0) >> 4 | (b & 0x0f0f) << 4
+    tcg_gen_andi_tl(b_right, b, 0xf0f0);
+    tcg_gen_shri_tl(b_right, b_right, 4);
+    tcg_gen_andi_tl(b_left, b, 0x0f0f);
+    tcg_gen_shli_tl(b_left, b_left, 4);
+    tcg_gen_or_tl(b, b_right, b_left);
+    // round 3: b = (b & 0xcccc) >> 2 | (b & 0x3333) << 2
+    tcg_gen_andi_tl(b_right, b, 0xcccc);
+    tcg_gen_shri_tl(b_right, b_right, 2);
+    tcg_gen_andi_tl(b_left, b, 0x3333);
+    tcg_gen_shli_tl(b_left, b_left, 2);
+    tcg_gen_or_tl(b, b_right, b_left);
+    // round 4: b = (b & 0xaaaa) >> 1 | (b & 0x5555) << 1
+    tcg_gen_andi_tl(b_right, b, 0xaaaa);
+    tcg_gen_shri_tl(b_right, b_right, 1);
+    tcg_gen_andi_tl(b_left, b, 0x5555);
+    tcg_gen_shli_tl(b_left, b_left, 1);
+    tcg_gen_or_tl(b, b_right, b_left);
+
+    // write back
+    if (a->ax == 1) {
+        tcg_gen_andi_tl(cpu_r[C28X_REG_ACC], cpu_r[C28X_REG_ACC], 0x0000ffff);
+        tcg_gen_shli_tl(b, b, 16);
+        tcg_gen_or_tl(cpu_r[C28X_REG_ACC], cpu_r[C28X_REG_ACC], b);
+    } else {
+        tcg_gen_andi_tl(cpu_r[C28X_REG_ACC], cpu_r[C28X_REG_ACC], 0xffff0000);
+        tcg_gen_or_tl(cpu_r[C28X_REG_ACC], cpu_r[C28X_REG_ACC], b);
+    }
+
+    return true;
+}
+
+static bool trans_INC_loc16(DisasContext* ctx, arg_INC_loc16* a) {
+    TCGv target_value = tcg_temp_new_i32();
+    C28X_READ_LOC16_RMW(a->loc16, target_value);
+    tcg_gen_setcondi_tl(TCG_COND_EQ, cpu_sr[V_FLAG], target_value, 0x7fff);
+    tcg_gen_setcondi_tl(TCG_COND_EQ, cpu_sr[V_FLAG], target_value, 0x7fff);
+    tcg_gen_ext16s_tl(target_value, target_value);
+    tcg_gen_setcondi_tl(TCG_COND_LT, cpu_sr[N_FLAG], target_value, -1);
+    tcg_gen_setcondi_tl(TCG_COND_EQ, cpu_sr[Z_FLAG], target_value, -1);
+    tcg_gen_addi_tl(target_value, target_value, 1);
+    tcg_gen_andi_tl(target_value, target_value, 0xffff);
+    C28X_WRITE_LOC16_RMW(a->loc16, target_value);
+
+    return true;
+}
+
 static bool trans_LB_xar7(DisasContext* ctx, arg_LB_xar7* a) {
     // No flags and modes
     TCGv baddr = tcg_temp_new_i32();
-    tcg_gen_andi_tl(baddr, cpu_r[C28X_REG_XAR7], 0x3FFFFF);
+    tcg_gen_andi_tl(baddr, cpu_r[C28X_REG_XAR7], 0x3fffff);
 
     tcg_gen_mov_tl(cpu_r[C28X_REG_PC], baddr);
 
     ctx->base.is_jmp = DISAS_LOOKUP;
+
+    return true;
+}
+
+static bool trans_LC_xar7(DisasContext* ctx, arg_LC_xar7* a) {
+    // push PC to software stack
+    TCGv temp = tcg_temp_new_i32();    // temp(21:0) = PC + 1
+    tcg_gen_addi_tl(temp, cpu_r[C28X_REG_PC], 1);
+    tcg_gen_andi_tl(temp, temp, 0x3fffff);
+    // [SP] = temp(15:0)
+    TCGv sp_addr = tcg_temp_new_i32();
+    tcg_gen_muli_tl(sp_addr, cpu_r[C28X_REG_SP], 2);
+    tcg_gen_qemu_st_tl(temp, sp_addr, 0, MO_16);
+    // [SP+1] = temp(21:16)
+    tcg_gen_addi_tl(sp_addr, sp_addr, 2);
+    tcg_gen_shri_tl(temp, temp, 16);
+    tcg_gen_qemu_st_tl(temp, sp_addr, 0, MO_16);
+    tcg_gen_addi_tl(cpu_r[C28X_REG_SP], cpu_r[C28X_REG_SP], 2);
+    // PC = XAR7
+    tcg_gen_mov_tl(cpu_r[C28X_REG_PC], cpu_r[C28X_REG_XAR7]);
+    tcg_gen_andi_tl(cpu_r[C28X_REG_PC], cpu_r[C28X_REG_PC], 0x3fffff);
+
+    ctx->base.is_jmp = DISAS_LOOKUP;
+    return true;
+}
+
+static bool trans_LCR_xarn(DisasContext* ctx, arg_LCR_xarn* a) {
+    TCGv rpc = tcg_temp_new_i32();
+    tcg_gen_andi_tl(rpc, cpu_r[C28X_REG_PC], 0xffff);
+    TCGv sp = tcg_temp_new_i32();
+    tcg_gen_muli_tl(sp, cpu_r[C28X_REG_SP], 2);
+    tcg_gen_qemu_st_tl(rpc, sp, 0, MO_16);
+    tcg_gen_shri_tl(rpc, cpu_r[C28X_REG_PC], 16);
+    tcg_gen_addi_tl(sp, sp, 2);
+    tcg_gen_qemu_st_tl(rpc, sp, 0, MO_16);
+    tcg_gen_addi_tl(cpu_r[C28X_REG_SP], cpu_r[C28X_REG_SP], 2);
+    tcg_gen_addi_tl(cpu_r[C28X_REG_RPC], cpu_r[C28X_REG_PC], 2);
+    tcg_gen_andi_tl(cpu_r[C28X_REG_RPC], cpu_r[C28X_REG_XAR0 + a->xarn], 0x3fffff);
+
+    ctx->base.is_jmp = DISAS_LOOKUP;
+    return true;
+}
+
+static bool trans_LPADDR(DisasContext* ctx, arg_LPADDR* a) {
+    tcg_gen_movi_tl(cpu_sr[AMODE_FLAG], 1);
+    return true;
+}
+
+static bool trans_LRET(DisasContext* ctx, arg_LRET* a) {
+    // SP = SP - 1
+    // temp(31:16) = [SP]
+    // SP = SP - 1
+    // temp(15:0) = [SP]
+    // PC = temp
+    tcg_gen_subi_tl(cpu_r[C28X_REG_SP], cpu_r[C28X_REG_SP], 1);
+    TCGv ret_pc_hi = tcg_temp_new_i32();
+    TCGv sp_addr = tcg_temp_new_i32();
+    tcg_gen_muli_tl(sp_addr, cpu_r[C28X_REG_SP], 2);
+    tcg_gen_qemu_ld_tl(ret_pc_hi, sp_addr, 0, MO_16);
+    tcg_gen_subi_tl(cpu_r[C28X_REG_SP], cpu_r[C28X_REG_SP], 1);
+    tcg_gen_muli_tl(sp_addr, cpu_r[C28X_REG_SP], 2);
+    tcg_gen_qemu_ld_tl(cpu_r[C28X_REG_PC], sp_addr, 0, MO_16);
+    tcg_gen_shli_tl(ret_pc_hi, ret_pc_hi, 16);
+    tcg_gen_or_tl(cpu_r[C28X_REG_PC], cpu_r[C28X_REG_PC], ret_pc_hi);
+
+    return true;
+}
+
+static bool trans_LRETE(DisasContext* ctx, arg_LRETE* a) {
+    tcg_gen_subi_tl(cpu_r[C28X_REG_SP], cpu_r[C28X_REG_SP], 1);
+    TCGv ret_pc_hi = tcg_temp_new_i32();
+    TCGv sp_addr = tcg_temp_new_i32();
+    tcg_gen_muli_tl(sp_addr, cpu_r[C28X_REG_SP], 2);
+    tcg_gen_qemu_ld_tl(ret_pc_hi, sp_addr, 0, MO_16);
+    tcg_gen_subi_tl(cpu_r[C28X_REG_SP], cpu_r[C28X_REG_SP], 1);
+    tcg_gen_muli_tl(sp_addr, cpu_r[C28X_REG_SP], 2);
+    tcg_gen_qemu_ld_tl(cpu_r[C28X_REG_PC], sp_addr, 0, MO_16);
+    tcg_gen_shli_tl(ret_pc_hi, ret_pc_hi, 16);
+    tcg_gen_or_tl(cpu_r[C28X_REG_PC], cpu_r[C28X_REG_PC], ret_pc_hi);
+    tcg_gen_movi_tl(cpu_sr[INTM_FLAG], 0);
+    return true;
+}
+
+static bool trans_LRETR(DisasContext* ctx, arg_LRETR* a) {
+    tcg_gen_mov_tl(cpu_r[C28X_REG_PC], cpu_r[C28X_REG_RPC]);
+    tcg_gen_subi_tl(cpu_r[C28X_REG_SP], cpu_r[C28X_REG_SP], 1);
+
+    TCGv ret_pc_hi = tcg_temp_new_i32();
+    TCGv sp_addr = tcg_temp_new_i32();
+    tcg_gen_muli_tl(sp_addr, cpu_r[C28X_REG_SP], 2);
+    tcg_gen_qemu_ld_tl(ret_pc_hi, sp_addr, 0, MO_16);
+    tcg_gen_subi_tl(cpu_r[C28X_REG_SP], cpu_r[C28X_REG_SP], 1);
+    tcg_gen_muli_tl(sp_addr, cpu_r[C28X_REG_SP], 2);
+    tcg_gen_qemu_ld_tl(cpu_r[C28X_REG_RPC], sp_addr, 0, MO_16);
+    tcg_gen_shli_tl(ret_pc_hi, ret_pc_hi, 16);
+    tcg_gen_or_tl(cpu_r[C28X_REG_RPC], cpu_r[C28X_REG_RPC], ret_pc_hi);
 
     return true;
 }
@@ -1334,6 +1506,68 @@ static bool trans_CMP_loc16_imm16s(DisasContext* ctx, arg_CMP_loc16_imm16s* a) {
     tcg_gen_setcondi_tl(TCG_COND_EQ, cpu_sr[Z_FLAG], result, 0);
     // set n flag when result is negative
     tcg_gen_setcond_tl(TCG_COND_LT, cpu_sr[N_FLAG], result, 0);
+    return true;
+}
+
+static bool trans_FFC_xar7_imm22(DisasContext* ctx, arg_FFC_xar7_imm22* a) {
+    TCGv baddr = tcg_temp_new_i32();
+    tcg_gen_movi_tl(baddr, a->imm22);
+    tcg_gen_andi_tl(baddr, baddr, 0x3fffff);
+    TCGv xar7 = tcg_temp_new_i32();
+    tcg_gen_addi_tl(xar7, cpu_r[C28X_REG_PC], 2);
+    tcg_gen_andi_tl(xar7, xar7, 0x3fffff);
+    tcg_gen_mov_tl(cpu_r[C28X_REG_XAR7], xar7);
+
+    ctx->base.is_jmp = DISAS_LOOKUP;
+    return true;
+}
+
+static bool trans_LB_imm22(DisasContext* ctx, arg_LB_imm22* a) {
+    TCGv baddr = tcg_temp_new_i32();
+    tcg_gen_movi_tl(baddr, a->imm22);
+    tcg_gen_andi_tl(baddr, baddr, 0x3fffff);
+    tcg_gen_mov_tl(cpu_r[C28X_REG_PC], baddr);
+
+    ctx->base.is_jmp = DISAS_LOOKUP;
+    return true;
+}
+
+static bool trans_LC_imm22(DisasContext* ctx, arg_LC_imm22* a) {
+    // push PC to software stack
+    TCGv temp = tcg_temp_new_i32();    // temp(21:0) = PC + 1
+    tcg_gen_addi_tl(temp, cpu_r[C28X_REG_PC], 1);
+    tcg_gen_andi_tl(temp, temp, 0x3fffff);
+    // [SP] = temp(15:0)
+    TCGv sp_addr = tcg_temp_new_i32();
+    tcg_gen_muli_tl(sp_addr, cpu_r[C28X_REG_SP], 2);
+    tcg_gen_qemu_st_tl(temp, sp_addr, 0, MO_16);
+    // [SP+1] = temp(21:16)
+    tcg_gen_addi_tl(sp_addr, sp_addr, 2);
+    tcg_gen_shri_tl(temp, temp, 16);
+    tcg_gen_qemu_st_tl(temp, sp_addr, 0, MO_16);
+    tcg_gen_addi_tl(cpu_r[C28X_REG_SP], cpu_r[C28X_REG_SP], 2);
+    // PC = imm22
+    tcg_gen_movi_tl(cpu_r[C28X_REG_PC], a->imm22);
+    tcg_gen_andi_tl(cpu_r[C28X_REG_PC], cpu_r[C28X_REG_PC], 0x3fffff);
+
+    ctx->base.is_jmp = DISAS_LOOKUP;
+    return true;
+}
+
+static bool trans_LCR_imm22(DisasContext* ctx, arg_LCR_imm22* a) {
+    TCGv rpc = tcg_temp_new_i32();
+    tcg_gen_andi_tl(rpc, cpu_r[C28X_REG_PC], 0xffff);
+    TCGv sp = tcg_temp_new_i32();
+    tcg_gen_muli_tl(sp, cpu_r[C28X_REG_SP], 2);
+    tcg_gen_qemu_st_tl(rpc, sp, 0, MO_16);
+    tcg_gen_shri_tl(rpc, cpu_r[C28X_REG_PC], 16);
+    tcg_gen_addi_tl(sp, sp, 2);
+    tcg_gen_qemu_st_tl(rpc, sp, 0, MO_16);
+    tcg_gen_addi_tl(cpu_r[C28X_REG_SP], cpu_r[C28X_REG_SP], 2);
+    tcg_gen_addi_tl(cpu_r[C28X_REG_RPC], cpu_r[C28X_REG_PC], 2);
+    tcg_gen_movi_tl(cpu_r[C28X_REG_PC], a->imm22);
+
+    ctx->base.is_jmp = DISAS_LOOKUP;
     return true;
 }
 

@@ -143,8 +143,28 @@ INSN(CSB_acc, CSB, "ACC")
 
 INSN(DEC_loc16, DEC, "%s", LOC(a->loc16))
 
+INSN(EALLOW, EALLOW, "")
+INSN(EDIS, EDIS, "")
+
+INSN(FFC_xar7_imm22, FFC, "XAR7, #0x%x", a->imm22)
+INSN(FLIP_ax, FLIP, "%s", AX(a->ax))
+
+INSN(INC_loc16, INC, "%s", LOC(a->loc16))
+
+INSN(LB_xar7, LB, "*XAR7")
+INSN(LB_imm22, LB, "#0x%x", a->imm22)
+INSN(LC_xar7, LC, "*XAR7")
+INSN(LC_imm22, LC, "#0x%x", a->imm22)
+INSN(LCR_imm22, LCR, "#0x%x", a->imm22)
+INSN(LCR_xarn, LCR, "%s", XARn(a->xarn))
+
+INSN(LPADDR, LPADDR, "")
+
+INSN(LRET, LRET, "")
+INSN(LRETE, LRETE, "")
+INSN(LRETR, LRETR, "")
+
 INSN(MOV_acc_loc16_t, MOV, "ACC, %s << T", LOC(a->loc16))
-INSN(LB_xar7, LB, "XAR7")
 INSN(MOVL_xar0_imm22, MOVL, "XAR0, #0x%x", a->imm22)
 
 INSN(SETC_mode, SETC, "%s", MODE(a->mode))
