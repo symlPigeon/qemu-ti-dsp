@@ -9,10 +9,11 @@
 &cond_offset16          cond offset16
 &arn_offset16           arn offset16
 &arn_arm_offset16       arn arm offset16
+&loc16_addr16           loc16 addr16
 
 @op_imm22               .... .... .. imm22:22                               &imm22
 @op_shft_imm16          .... .... .... shft:4 imm16:16                      &shft_imm16
-@op_acc_loc16           .... .... .... .... .... .... loc16:8               &loc16
+@op_loc16           .... .... .... .... .... .... loc16:8               &loc16
 @op_loc16_s16           .... .... loc16:8 imm16s:16                         &loc16_s16
 @op_ADD_acc_loc16_shft  .... .... .... .... .... shft:4 loc16:8             &shft_loc16
 @op_loc32               .... .... .... .... .... .... loc32:8               &loc32
@@ -21,9 +22,10 @@
 @op_cond_offset16       .... .... .... cond:4 offset16:16                   &cond_offset16       
 @op_arn_offset16        .... .... .... . arn:3 offset16:16                  &arn_offset16
 @op_arn_arm_offset16    .... .... .. arn:3 arm:3 offset16:16                &arn_arm_offset16
+@op_loc16_addr16        .... .... loc16:8 addr16:16                         &loc16_addr16
 
 ADD_acc_imm16_shft      1111 1111 0001 .... .... .... .... ....             @op_shft_imm16
-ADD_acc_loc16_t         0101 0110 0010 0011 0000 0000 .... ....             @op_acc_loc16
+ADD_acc_loc16_t         0101 0110 0010 0011 0000 0000 .... ....             @op_loc16
 ADD_acc_loc16_shft      0101 0110 0000 0100 0000 .... .... ....             @op_ADD_acc_loc16_shft
 ADD_loc16_s16           0000 1000 .... .... .... .... .... ....             @op_loc16_s16
 ADDL_loc32_acc          0101 0110 0000 0001 0000 0000 .... ....             @op_loc32
@@ -48,5 +50,7 @@ LB_imm22                0000 0000 01.. .... .... .... .... ....             @op_
 LC_imm22                0000 0000 10.. .... .... .... .... ....             @op_imm22
 LCR_imm22               0111 0110 01.. .... .... .... .... ....             @op_imm22
 
-MOV_acc_loc16_t         0101 0110 0000 0110 0000 0000 .... ....             @op_acc_loc16
+MOV_addr16_loc16        1111 0100 .... .... .... .... .... ....             @op_loc16_addr16
+MOV_acc_imm16_shft      1111 1111 0010 .... .... .... .... ....             @op_shft_imm16
+MOV_acc_loc16_t         0101 0110 0000 0110 0000 0000 .... ....             @op_loc16
 MOVL_xar0_imm22         1000 1101 00.. .... .... .... .... ....             @op_imm22

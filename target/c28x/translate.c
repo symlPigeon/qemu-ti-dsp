@@ -1357,6 +1357,17 @@ static bool trans_LSRL_acc_t(DisasContext* ctx, arg_LSRL_acc_t* a) {
     return true;
 }
 
+static bool trans_MOV_acc_loc16(DisasContext* ctx, arg_MOV_acc_loc16* a) {
+    TCGv target_value = tcg_temp_new_i32();
+    C28X_READ_LOC16(a->loc16, target_value);
+    SXM_EXTEND(target_value);
+    tcg_gen_mov_tl(cpu_r[C28X_REG_ACC], target_value);
+
+    gen_set_n_flag(target_value);
+    gen_set_z_flag(target_value);
+    return true;
+}
+
 static bool trans_SETC_mode(DisasContext* ctx, arg_SETC_mode* a) {
     C28X_SETC_MODE(cpu_sr, a->mode);
 
@@ -1720,6 +1731,30 @@ static bool trans_LCR_imm22(DisasContext* ctx, arg_LCR_imm22* a) {
     tcg_gen_movi_tl(cpu_r[C28X_REG_PC], a->imm22);
 
     ctx->base.is_jmp = DISAS_LOOKUP;
+    return true;
+}
+
+static bool trans_MOV_addr16_loc16(DisasContext* ctx, arg_MOV_addr16_loc16* a) {
+    TCGv target_value = tcg_temp_new_i32();
+    C28X_READ_LOC16(a->loc16, target_value);
+    TCGv addr16 = tcg_constant_i32(a->addr16);
+    tcg_gen_muli_tl(addr16, addr16, 2);
+    tcg_gen_qemu_st_tl(target_value, addr16, 0, MO_16);
+
+    return true;
+}
+
+static bool trans_MOV_acc_imm16_shft(DisasContext* ctx, arg_MOV_acc_imm16_shft* a) {
+    TCGv imm = tcg_constant_i32(a->imm16);
+
+    SXM_EXTEND(imm)
+
+    tcg_gen_shli_tl(imm, imm, a->shft);
+    tcg_gen_mov_tl(cpu_r[C28X_REG_ACC], imm);
+
+    gen_set_z_flag(cpu_r[C28X_REG_ACC]);
+    gen_set_n_flag(cpu_r[C28X_REG_ACC]);
+
     return true;
 }
 

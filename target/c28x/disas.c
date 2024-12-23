@@ -178,8 +178,11 @@ INSN(LSR64_acc_p_shft, LSR64, "ACC:P, #%d", a->shft)
 INSN(LSR64_acc_p_t, LSR64, "ACC:P, T")
 INSN(LSRL_acc_t, LSRL, "ACC, T")
 
+INSN(MOV_addr16_loc16, MOV, "*(0:0x%04x), %s", a->addr16, LOC(a->loc16))
+INSN(MOV_acc_imm16_shft, MOV, "ACC, #0x%04x << #%d", a->imm16, a->shft)
 INSN(MOV_acc_loc16_t, MOV, "ACC, %s << T", LOC(a->loc16))
 INSN(MOVL_xar0_imm22, MOVL, "XAR0, #0x%x", a->imm22)
+INSN(MOV_acc_loc16, MOV, "ACC, %s", LOC(a->loc16))
 
 INSN(SETC_mode, SETC, "%s", MODE(a->mode))
 INSN(SETC_xf, SETC, "XF")
