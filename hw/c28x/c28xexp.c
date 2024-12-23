@@ -9,7 +9,7 @@
 #include "qemu/module.h"
 #include "qemu/units.h"
 #include "qom/object.h"
-#include "sysemu/sysemu.h"
+#include "system/system.h"
 
 #include "c28xexp.h"
 
