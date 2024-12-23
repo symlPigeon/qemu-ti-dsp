@@ -93,7 +93,15 @@ LRETR                0000 0000 0000 0110
 LSL_acc_shft         1111 1111 0011 ....                           @op_shft
 LSL_acc_t            1111 1111 0101 0000
 LSL_ax_shft          1111 1111 100. ....                           @op_ax_shft
+LSL_ax_t             1111 1111 0110 000.                           @op_ax
+LSL64_acc_p_shft     0101 0110 1010 ....                           @op_shft
+LSL64_acc_p_t        0101 0110 0101 0010            
+LSLL_acc_t           0101 0110 0011 1011
+LSR_ax_shft          1111 1111 110. ....                           @op_ax_shft
+LSR_ax_t             1111 1111 0110 001.                           @op_ax
+LSR64_acc_p_shft     0101 0110 1001 ....                           @op_shft
+LSR64_acc_p_t        0101 0110 0101 1001
+LSRL_acc_t           0101 0110 0010 0010
 
 SETC_mode            0011 1011 .... ....                           @op_mode
 SETC_xf              0101 0110 0010 0110
-

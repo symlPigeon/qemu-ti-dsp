@@ -166,7 +166,17 @@ INSN(LRETR, LRETR, "")
 
 INSN(LSL_acc_shft, LSL, "ACC, #%d", a->shft)
 INSN(LSL_acc_t, LSL, "ACC, T")
-INSN(LSL_ax_shft, LSL, "LSL, %s, #%d", AX(a->ax), a->shft)
+INSN(LSL_ax_shft, LSL, "%s, #%d", AX(a->ax), a->shft)
+INSN(LSL_ax_t, LSL, "%s, T", AX(a->ax))
+INSN(LSL64_acc_p_shft, LSL64, "ACC:P, #%d", a->shft)
+INSN(LSL64_acc_p_t, LSL64, "ACC:P, T")
+INSN(LSLL_acc_t, LSLL, "ACC, T")
+
+INSN(LSR_ax_shft, LSR, "%s, #%d", AX(a->ax), a->shft)
+INSN(LSR_ax_t, LSR, "%s, T", AX(a->ax))
+INSN(LSR64_acc_p_shft, LSR64, "ACC:P, #%d", a->shft)
+INSN(LSR64_acc_p_t, LSR64, "ACC:P, T")
+INSN(LSRL_acc_t, LSRL, "ACC, T")
 
 INSN(MOV_acc_loc16_t, MOV, "ACC, %s << T", LOC(a->loc16))
 INSN(MOVL_xar0_imm22, MOVL, "XAR0, #0x%x", a->imm22)
