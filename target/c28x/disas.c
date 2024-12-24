@@ -183,6 +183,8 @@ INSN(MOV_acc_imm16_shft, MOV, "ACC, #0x%04x << #%d", a->imm16, a->shft)
 INSN(MOV_acc_loc16_t, MOV, "ACC, %s << T", LOC(a->loc16))
 INSN(MOVL_xar0_imm22, MOVL, "XAR0, #0x%x", a->imm22)
 INSN(MOV_acc_loc16, MOV, "ACC, %s", LOC(a->loc16))
+INSN(MOV_acc_loc16_shft, MOV, "ACC, %s << #%d", LOC(a->loc16), a->shft)
+INSN(MOV_acc_loc16_shft16, MOV, "ACC, %s << #16", LOC(a->loc16))
 
 INSN(SETC_mode, SETC, "%s", MODE(a->mode))
 INSN(SETC_xf, SETC, "XF")
