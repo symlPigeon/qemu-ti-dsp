@@ -105,6 +105,8 @@ LSRL_acc_t           0101 0110 0010 0010
 
 MOV_acc_loc16        1000 0101 .... ....                           @op_loc16
 MOV_acc_loc16_shft16 0010 0101 .... ....                           @op_loc16
+MOV_ar6_loc16        0101 1110 .... ....                           @op_loc16
+MOV_ar7_loc16        0101 1111 .... ....                           @op_loc16
 
 SETC_mode            0011 1011 .... ....                           @op_mode
 SETC_xf              0101 0110 0010 0110
