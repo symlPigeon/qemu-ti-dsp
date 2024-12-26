@@ -188,6 +188,7 @@ static const struct TCGCPUOps c28x_tcg_ops = {
     .tlb_fill = c28x_cpu_tlb_fill,
     .do_interrupt = c28x_cpu_do_interrupt,
     .cpu_exec_halt = c28x_cpu_has_work,
+    .translate_code = c28x_translate_code,
 };
 
 void c28x_cpu_synchronize_from_tb(struct CPUState* cs, const TranslationBlock* tb) {

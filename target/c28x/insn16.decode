@@ -128,5 +128,7 @@ MOV_t_loc16          0010 1101 .... ....                           @op_loc16
 MOV_tl_0             0101 0110 0101 0110
 MOV_xarn_pc          0011 1110 0101 1...                           @op_xarn
 
+MOVA_t_loc16         0001 0000 .... ....                           @op_loc16
+
 SETC_mode            0011 1011 .... ....                           @op_mode
 SETC_xf              0101 0110 0010 0110

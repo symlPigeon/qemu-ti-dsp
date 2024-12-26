@@ -137,6 +137,8 @@ int c28x_cpu_memory_rw_debug(CPUState* cs, vaddr addr, uint8_t* buf, int len, bo
 
 void c28x_cpu_synchronize_from_tb(CPUState* cs, const TranslationBlock* tb);
 
+void c28x_translate_code(CPUState* cs, TranslationBlock* tb, int* max_insns, vaddr pc, void* host_pc);
+
 #include "exec/cpu-all.h"
 
 #endif

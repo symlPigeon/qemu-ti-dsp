@@ -1994,6 +1994,19 @@ static bool trans_MOV_ovc_loc16(DisasContext* ctx, arg_MOV_ovc_loc16* a) {
     return true;
 }
 
+static bool trans_MOVA_t_loc16(DisasContext* ctx, arg_MOVA_t_loc16* a) {
+    // T = [loc16];
+    TCGv target_value = tcg_temp_new_i32();
+    C28X_READ_LOC16(a->loc16, target_value);
+    tcg_gen_shli_tl(target_value, target_value, 16);
+    tcg_gen_andi_tl(cpu_r[C28X_REG_XT], cpu_r[C28X_REG_XT], 0xffff);
+    tcg_gen_or_tl(cpu_r[C28X_REG_XT], cpu_r[C28X_REG_XT], target_value);
+    // ACC = ACC + P << PM;
+    ADD_TO_ACC_WITH_FLAGS(cpu_r[C28X_REG_P], cpu_sr[PM_FLAG]);
+
+    return true;
+}
+
 // ==============================================
 // ============== TRANSLATION END ===============
 // ==============    32 bit insn  ===============
@@ -2079,7 +2092,7 @@ static const TranslatorOps c28x_tr_ops = {
     .disas_log = c28x_tr_disas_log,
 };
 
-void gen_intermediate_code(CPUState* cs, TranslationBlock* tb, int* max_insns, vaddr pc, void* host_pc) {
+void c28x_translate_code(CPUState* cs, TranslationBlock* tb, int* max_insns, vaddr pc, void* host_pc) {
     DisasContext dc = {};
     // base->pc_first should be the actual address
     // in C28x, one byte is 16-bits wide, so we need to multiply by 2

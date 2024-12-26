@@ -229,5 +229,7 @@ INSN(MOV_t_loc16, MOV, "T, %s", LOC(a->loc16))
 INSN(MOV_tl_0, MOV, "TL, #0")
 INSN(MOV_xarn_pc, MOV, "%s, PC", XARn(a->xarn))
 
+INSN(MOVA_t_loc16, MOVA, "T, %s", LOC(a->loc16))
+
 INSN(SETC_mode, SETC, "%s", MODE(a->mode))
 INSN(SETC_xf, SETC, "XF")
