@@ -417,6 +417,7 @@ inline static void gen_c28x_loc_rw_indirect_arp_access_mode(C28xLocDesc* desc, T
         tcg_gen_br(labels[8]);
     }
     gen_set_label(labels[8]);
+    tcg_gen_add_tl(addr, addr, desc->offset);
 
     _GENERATE_RW_MEM_CODE
 }
@@ -459,7 +460,7 @@ inline static void gen_c28x_mem_register_access_l_mode(C28xLocDesc* desc, TCGv r
     }
 }
 
-void c28x_gen_loc_rw(C28xLocDesc* desc, TCGv_i32 reg) {
+void c28x_gen_loc_rw(C28xLocDesc* desc, TCGv reg) {
     switch (desc->mode) {
     case C28X_MEM_DIRECT_ACCESS_MODE:
         gen_c28x_loc_rw_direct_access_mode(desc, reg);

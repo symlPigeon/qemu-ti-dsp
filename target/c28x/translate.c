@@ -265,6 +265,14 @@ inline static void gen_and_dst(TCGv dst, TCGv mask, bool check_flag) {
     tcg_gen_shri_tl(name, cpu_r[C28X_REG_XT], 16);                                                                     \
     tcg_gen_andi_tl(name, name, (1 << lsb) - 1);
 
+#define WRITE_REG_T(value)                                                                                             \
+    {                                                                                                                  \
+        tcg_gen_andi_tl(cpu_r[C28X_REG_XT], cpu_r[C28X_REG_XT], 0xffff);                                               \
+        TCGv _value = tcg_temp_new_i32();                                                                              \
+        tcg_gen_shli_tl(_value, value, 16);                                                                            \
+        tcg_gen_or_tl(cpu_r[C28X_REG_XT], cpu_r[C28X_REG_XT], _value);                                                 \
+    }
+
 #define REG_AX_R(name, AX)                                                                                             \
     TCGv name = tcg_temp_new_i32();                                                                                    \
     if (AX)                                                                                                            \
@@ -293,12 +301,14 @@ inline static void gen_and_dst(TCGv dst, TCGv mask, bool check_flag) {
     tcg_gen_setcondi_tl(TCG_COND_LT, cpu_sr[N_FLAG], dst, 0);
 
 #define CHECK_ACC_P_NZ                                                                                                 \
-    tcg_gen_setcondi_tl(TCG_COND_LT, cpu_sr[N_FLAG], cpu_r[C28X_REG_ACC], 0);                                          \
-    TCGv acc_zero = tcg_temp_new_i32();                                                                                \
-    TCGv p_zero = tcg_temp_new_i32();                                                                                  \
-    tcg_gen_setcondi_tl(TCG_COND_EQ, acc_zero, cpu_r[C28X_REG_ACC], 0);                                                \
-    tcg_gen_setcondi_tl(TCG_COND_EQ, p_zero, cpu_r[C28X_REG_P], 0);                                                    \
-    tcg_gen_and_tl(cpu_sr[Z_FLAG], acc_zero, p_zero);
+    {                                                                                                                  \
+        tcg_gen_setcondi_tl(TCG_COND_LT, cpu_sr[N_FLAG], cpu_r[C28X_REG_ACC], 0);                                      \
+        TCGv acc_zero = tcg_temp_new_i32();                                                                            \
+        TCGv p_zero = tcg_temp_new_i32();                                                                              \
+        tcg_gen_setcondi_tl(TCG_COND_EQ, acc_zero, cpu_r[C28X_REG_ACC], 0);                                            \
+        tcg_gen_setcondi_tl(TCG_COND_EQ, p_zero, cpu_r[C28X_REG_P], 0);                                                \
+        tcg_gen_and_tl(cpu_sr[Z_FLAG], acc_zero, p_zero);                                                              \
+    }
 
 #define CHECK_DST_AX_NZ(loc16, value)                                                                                  \
     if (loc16 == 0b10101000 || loc16 == 0b10101001) {                                                                  \
@@ -1491,9 +1501,7 @@ static bool trans_MOV_pm_ax(DisasContext* ctx, arg_MOV_pm_ax* a) {
 static bool trans_MOV_t_loc16(DisasContext* ctx, arg_MOV_t_loc16* a) {
     TCGv target_value = tcg_temp_new_i32();
     C28X_READ_LOC16(a->loc16, target_value);
-    tcg_gen_shli_tl(target_value, target_value, 16);
-    tcg_gen_andi_tl(cpu_r[C28X_REG_XT], cpu_r[C28X_REG_XT], 0xffff);
-    tcg_gen_or_tl(cpu_r[C28X_REG_XT], cpu_r[C28X_REG_XT], target_value);
+    WRITE_REG_T(target_value);
     return true;
 }
 
@@ -1504,6 +1512,29 @@ static bool trans_MOV_tl_0(DisasContext* ctx, arg_MOV_tl_0* a) {
 
 static bool trans_MOV_xarn_pc(DisasContext* ctx, arg_MOV_xarn_pc* a) {
     tcg_gen_mov_tl(cpu_r[C28X_REG_XAR0 + a->xarn], cpu_r[C28X_REG_PC]);
+    return true;
+}
+
+static bool trans_MOVAD_t_loc16(DisasContext* ctx, arg_MOVAD_t_loc16* a) {
+    // T = [loc16] then [loc16 + 1] = T; So we should not use macro wrapper.
+    TCGv loc16_value = tcg_temp_new_i32();
+    C28xLocDesc* desc = g_malloc(sizeof(C28xLocDesc));
+    c28x_resolve_loc_desc(desc, cpu_r, cpu_sr, a->loc16, C28X_MEM_ACCESS_READ, C28X_LOC_16);
+    if ((desc->mode & C28X_MEM_REGISTER_ACCESS_MODE) != 0) {
+        // Illegal instruction trap
+        gen_helper_raise_illegal_instruction(tcg_env);
+        ctx->base.is_jmp = DISAS_NORETURN;
+    }
+    if (desc->pre_hook) desc->pre_hook(desc);
+    c28x_gen_loc_rw(desc, loc16_value);
+    WRITE_REG_T(loc16_value);
+    tcg_gen_addi_tl(desc->offset, desc->offset, 1);
+    desc->mode = C28X_MEM_ACCESS_WRITE;
+    c28x_gen_loc_rw(desc, loc16_value);
+    if (desc->post_hook) desc->post_hook(desc);
+    g_free(desc);
+    // ACC = ACC + P << PM;
+    ADD_TO_ACC_WITH_FLAGS_NO_SXM(cpu_r[C28X_REG_P], cpu_sr[PM_FLAG])
     return true;
 }
 
