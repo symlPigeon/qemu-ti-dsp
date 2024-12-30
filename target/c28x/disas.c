@@ -196,11 +196,10 @@ INSN(LSR64_acc_p_shft, LSR64, "ACC:P, #%d", a->shft)
 INSN(LSR64_acc_p_t, LSR64, "ACC:P, T")
 INSN(LSRL_acc_t, LSRL, "ACC, T")
 
-// Move
+// 16 bit Move
 INSN(MOV_addr16_loc16, MOV, "*(0:0x%04x), %s", a->addr16, LOC(a->loc16))
 INSN(MOV_acc_imm16_shft, MOV, "ACC, #0x%04x << #%d", a->imm16, a->shft)
 INSN(MOV_acc_loc16_t, MOV, "ACC, %s << T", LOC(a->loc16))
-INSN(MOVL_xar0_imm22, MOVL, "XAR0, #0x%x", a->imm22)
 INSN(MOV_acc_loc16, MOV, "ACC, %s", LOC(a->loc16))
 INSN(MOV_acc_loc16_shft, MOV, "ACC, %s << #%d", LOC(a->loc16), a->shft)
 INSN(MOV_acc_loc16_shft16, MOV, "ACC, %s << #16", LOC(a->loc16))
@@ -229,6 +228,7 @@ INSN(MOV_t_loc16, MOV, "T, %s", LOC(a->loc16))
 INSN(MOV_tl_0, MOV, "TL, #0")
 INSN(MOV_xarn_pc, MOV, "%s, PC", XARn(a->xarn))
 
+// Move and Add
 INSN(MOVA_t_loc16, MOVA, "T, %s", LOC(a->loc16))
 INSN(MOVAD_t_loc16, MOVAD, "T, %s", LOC(a->loc16))
 
@@ -242,5 +242,55 @@ INSN(MOVB_xarn_imm8, MOVB, "%s, #0x%02x", XARn(a->xarn), a->imm8)
 INSN(MOVB_xar6_imm8, MOVB, "XAR6, #0x%02x", a->imm8)
 INSN(MOVB_xar7_imm8, MOVB, "XAR7, #0x%02x", a->imm8)
 
-INSN(SETC_mode, SETC, "%s", MODE(a->mode))
-INSN(SETC_xf, SETC, "XF")
+// 32 bit move and save
+INSN(MOVDL_xt_loc32, MOVDL, "XT, %s", LOC(a->loc32))
+
+// Save High Word
+INSN(MOVH_loc16_acc_shft1, MOVH, "%s, ACC << 1", LOC(a->loc16))
+INSN(MOVH_loc16_acc_shft, MOVH, "%s, ACC << #%d", LOC(a->loc16), a->shft3)
+INSN(MOVH_loc16_p, MOVH, "%s, P", LOC(a->loc16))
+
+// 32bit Move
+INSN(MOVL_acc_loc32, MOVL, "ACC, %s", LOC(a->loc32))
+INSN(MOVL_acc_p_pm, MOVL, "ACC, P<<PM")
+INSN(MOVL_loc32_acc, MOVL, "%s, ACC", LOC(a->loc32))
+INSN(MOVL_loc32_acc_cond, MOVL, "%s, ACC, %s", LOC(a->loc32), COND(a->cond))
+INSN(MOVL_loc32_p, MOVL, "%s, P", LOC(a->loc32))
+// 32 bit Save XARn
+INSN(MOVL_loc32_xar0, MOVL, "%s, XAR0", LOC(a->loc32))
+INSN(MOVL_loc32_xar1, MOVL, "%s, XAR1", LOC(a->loc32))
+INSN(MOVL_loc32_xar2, MOVL, "%s, XAR2", LOC(a->loc32))
+INSN(MOVL_loc32_xar3, MOVL, "%s, XAR3", LOC(a->loc32))
+INSN(MOVL_loc32_xar4, MOVL, "%s, XAR4", LOC(a->loc32))
+INSN(MOVL_loc32_xar5, MOVL, "%s, XAR5", LOC(a->loc32))
+INSN(MOVL_loc32_xar6, MOVL, "%s, XAR6", LOC(a->loc32))
+INSN(MOVL_loc32_xar7, MOVL, "%s, XAR7", LOC(a->loc32))
+// 32 bit Move
+INSN(MOVL_loc32_xt, MOVL, "%s, XT", LOC(a->loc32))
+INSN(MOVL_p_acc, MOVL, "P, ACC")
+INSN(MOVL_p_loc32, MOVL, "P, %s", LOC(a->loc32))
+// 32 bit Load XARn
+INSN(MOVL_xar0_loc32, MOVL, "XAR0, %s", LOC(a->loc32))
+INSN(MOVL_xar1_loc32, MOVL, "XAR1, %s", LOC(a->loc32))
+INSN(MOVL_xar2_loc32, MOVL, "XAR2, %s", LOC(a->loc32))
+INSN(MOVL_xar3_loc32, MOVL, "XAR3, %s", LOC(a->loc32))
+INSN(MOVL_xar4_loc32, MOVL, "XAR4, %s", LOC(a->loc32))
+INSN(MOVL_xar5_loc32, MOVL, "XAR5, %s", LOC(a->loc32))
+INSN(MOVL_xar6_loc32, MOVL, "XAR6, %s", LOC(a->loc32))
+INSN(MOVL_xar7_loc32, MOVL, "XAR7, %s", LOC(a->loc32))
+// load 22 bit immediate to XARn
+INSN(MOVL_xar0_imm22, MOVL, "XAR0, #0x%x", a->imm22)
+INSN(MOVL_xar1_imm22, MOVL, "XAR1, #0x%x", a->imm22)
+INSN(MOVL_xar2_imm22, MOVL, "XAR2, #0x%x", a->imm22)
+INSN(MOVL_xar3_imm22, MOVL, "XAR3, #0x%x", a->imm22)
+INSN(MOVL_xar4_imm22, MOVL, "XAR4, #0x%x", a->imm22)
+INSN(MOVL_xar5_imm22, MOVL, "XAR5, #0x%x", a->imm22)
+INSN(MOVL_xar6_imm22, MOVL, "XAR6, #0x%x", a->imm22)
+INSN(MOVL_xar7_imm22, MOVL, "XAR7, #0x%x", a->imm22)
+// Load 32bit
+INSN(MOVL_xt_loc32, MOVL, "XT, %s", LOC(a->loc32))
+
+// Load T and Store P
+INSN(MOVP_t_loc16, MOVP, "T, %s", LOC(a->loc16))
+
+INSN(SETC_mode, SETC, "%s", MODE(a->mode)) INSN(SETC_xf, SETC, "XF")

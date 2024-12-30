@@ -143,5 +143,41 @@ MOVB_ax_imm8         1001 101. .... ....                           @op_ax_imm8
 MOVB_xar6_imm8       1011 1110 .... ....                           @op_imm8
 MOVB_xar7_imm8       1011 0110 .... ....                           @op_imm8
 
+MOVDL_xt_loc32       1010 0110 .... ....                           @op_loc32
+
+MOVH_loc16_acc_shft1 1011 0011 .... ....                           @op_loc16
+MOVH_loc16_p         0101 0111 .... ....                           @op_loc16
+
+MOVL_acc_loc32       0000 0110 .... ....                           @op_loc32
+MOVL_loc32_acc       0001 1110 .... ....                           @op_loc32 
+MOVL_loc32_p         1010 1001 .... ....                           @op_loc32    
+
+MOVL_loc32_xar0      0011 1010 .... ....                           @op_loc32
+MOVL_loc32_xar1      1011 0010 .... ....                           @op_loc32
+MOVL_loc32_xar2      1010 1010 .... ....                           @op_loc32
+MOVL_loc32_xar3      1010 0010 .... ....                           @op_loc32
+MOVL_loc32_xar4      1010 1000 .... ....                           @op_loc32
+MOVL_loc32_xar5      1010 0000 .... ....                           @op_loc32
+MOVL_loc32_xar6      1100 0010 .... ....                           @op_loc32
+MOVL_loc32_xar7      1100 0011 .... ....                           @op_loc32
+
+MOVL_loc32_xt        1010 1011 .... ....                           @op_loc32
+MOVL_p_acc           1111 1111 0101 1010
+MOVL_p_loc32         1010 0011 .... ....                           @op_loc32
+
+MOVL_xar0_loc32      1000 1110 .... ....                           @op_loc32
+MOVL_xar1_loc32      1000 1011 .... ....                           @op_loc32
+MOVL_xar2_loc32      1000 0110 .... ....                           @op_loc32
+MOVL_xar3_loc32      1000 0010 .... ....                           @op_loc32
+MOVL_xar4_loc32      1000 1010 .... ....                           @op_loc32
+MOVL_xar5_loc32      1000 0011 .... ....                           @op_loc32
+MOVL_xar6_loc32      1100 0100 .... ....                           @op_loc32
+MOVL_xar7_loc32      1100 0101 .... ....                           @op_loc32
+
+MOVL_xt_loc32        1000 0111 .... ....                           @op_loc32
+{
+  MOVL_acc_p_pm        0001 0110 1010 1100
+  MOVP_t_loc16         0001 0110 .... ....                           @op_loc16
+}
 SETC_mode            0011 1011 .... ....                           @op_mode
 SETC_xf              0101 0110 0010 0110
