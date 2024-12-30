@@ -470,27 +470,27 @@ static bool trans_ADD_acc_imm8(DisasContext* ctx, arg_ADD_acc_imm8* a) {
     return true;
 }
 
-static bool trans_ADDB_ax_imm8s(DisasContext* ctx, arg_ADDB_ax_imm8s* a) {
+static bool trans_ADDB_ax_imm8(DisasContext* ctx, arg_ADDB_ax_imm8* a) {
     // NOTE: not sure if this is correct
-    TCGv imm8s = tcg_constant_tl(a->imm8s);
-    tcg_gen_ext8s_tl(imm8s, imm8s);
+    TCGv imm8 = tcg_constant_tl(a->imm8);
+    tcg_gen_ext8s_tl(imm8, imm8);
     TCGv adder_1 = tcg_temp_new_i32();
     TCGv adder_2 = tcg_temp_new_i32();
     TCGv add_sum = tcg_temp_new_i32();
 
-    tcg_gen_mov_tl(adder_1, imm8s);
+    tcg_gen_mov_tl(adder_1, imm8);
     if (a->ax == 1) {
         // AH
         tcg_gen_shri_tl(adder_2, cpu_r[C28X_REG_ACC], 16);
-        tcg_gen_shli_tl(imm8s, imm8s, 16);
-        tcg_gen_add_tl(cpu_r[C28X_REG_ACC], cpu_r[C28X_REG_ACC], imm8s);
+        tcg_gen_shli_tl(imm8, imm8, 16);
+        tcg_gen_add_tl(cpu_r[C28X_REG_ACC], cpu_r[C28X_REG_ACC], imm8);
     } else {
         // AL
         tcg_gen_andi_tl(adder_2, cpu_r[C28X_REG_ACC], 0xffff);
         // Not sure if this add will affect AH
         // assume not
         TCGv temp = tcg_temp_new_i32();
-        tcg_gen_add_tl(temp, cpu_r[C28X_REG_ACC], imm8s);
+        tcg_gen_add_tl(temp, cpu_r[C28X_REG_ACC], imm8);
         tcg_gen_andi_tl(temp, temp, 0x0000ffff);
         tcg_gen_andi_tl(cpu_r[C28X_REG_ACC], cpu_r[C28X_REG_ACC], 0xffff0000);
         tcg_gen_or_tl(cpu_r[C28X_REG_ACC], cpu_r[C28X_REG_ACC], temp);
@@ -613,9 +613,9 @@ static bool trans_AND_ax_loc16(DisasContext* ctx, arg_AND_ax_loc16* a) {
     return true;
 }
 
-static bool trans_AND_ax_imm8s(DisasContext* ctx, arg_AND_ax_imm8s* a) {
-    // AX = AX AND 0:8bit, to reuse code, we call it imm8s, but it should be unsigned
-    TCGv mask = tcg_constant_tl(a->imm8s);
+static bool trans_AND_ax_imm8(DisasContext* ctx, arg_AND_ax_imm8* a) {
+    // AX = AX AND 0:8bit, to reuse code, we call it imm8, but it should be unsigned
+    TCGv mask = tcg_constant_tl(a->imm8);
     tcg_gen_ori_tl(mask, mask, 0xffff0000);    // 8 bit mask
 
     TCGv result = tcg_temp_new_i32();
@@ -875,7 +875,7 @@ static bool trans_CMP64_acc_p(DisasContext* ctx, arg_CMP64_acc_p* a) {
 
 static bool trans_CMPB_ax_imm8(DisasContext* ctx, arg_CMPB_ax_imm8* a) {
     REG_AX_R(ax_value, a->ax);
-    TCGv imm8 = tcg_constant_tl(a->imm8s);
+    TCGv imm8 = tcg_constant_tl(a->imm8);
     tcg_gen_ext8u_tl(imm8, imm8);
     tcg_gen_ext16u_tl(ax_value, ax_value);
     TCGv result = tcg_temp_new_i32();
@@ -1538,6 +1538,47 @@ static bool trans_MOVAD_t_loc16(DisasContext* ctx, arg_MOVAD_t_loc16* a) {
     return true;
 }
 
+static bool trans_MOVB_acc_imm8(DisasContext* ctx, arg_MOVB_acc_imm8* a) {
+    tcg_gen_movi_tl(cpu_r[C28X_REG_ACC], a->imm8);
+    gen_set_n_flag(cpu_r[C28X_REG_ACC]);
+    gen_set_z_flag(cpu_r[C28X_REG_ACC]);
+    return true;
+}
+
+static bool trans_MOVB_ar6_imm8(DisasContext* ctx, arg_MOVB_ar6_imm8* a) {
+    tcg_gen_andi_tl(cpu_r[C28X_REG_XAR6], cpu_r[C28X_REG_XAR6], 0xffff0000);
+    tcg_gen_ori_tl(cpu_r[C28X_REG_XAR6], cpu_r[C28X_REG_XAR6], a->imm8);
+    return true;
+}
+
+static bool trans_MOVB_ar7_imm8(DisasContext* ctx, arg_MOVB_ar7_imm8* a) {
+    tcg_gen_andi_tl(cpu_r[C28X_REG_XAR7], cpu_r[C28X_REG_XAR7], 0xffff0000);
+    tcg_gen_ori_tl(cpu_r[C28X_REG_XAR7], cpu_r[C28X_REG_XAR7], a->imm8);
+    return true;
+}
+
+static bool trans_MOVB_ax_imm8(DisasContext* ctx, arg_MOVB_ax_imm8* a) {
+    REG_AX_W(tcg_constant_tl(a->imm8), a->ax);
+    tcg_gen_setcondi_tl(TCG_COND_EQ, cpu_sr[Z_FLAG], tcg_constant_tl(a->imm8), 0);
+    tcg_gen_movi_tl(cpu_sr[N_FLAG], 0);
+    return true;
+}
+
+static bool trans_MOVB_xarn_imm8(DisasContext* ctx, arg_MOVB_xarn_imm8* a) {
+    tcg_gen_movi_tl(cpu_r[C28X_REG_XAR0 + a->xarn], a->imm8);
+    return true;
+}
+
+static bool trans_MOVB_xar6_imm8(DisasContext* ctx, arg_MOVB_xar6_imm8* a) {
+    tcg_gen_movi_tl(cpu_r[C28X_REG_XAR6], a->imm8);
+    return true;
+}
+
+static bool trans_MOVB_xar7_imm8(DisasContext* ctx, arg_MOVB_xar7_imm8* a) {
+    tcg_gen_movi_tl(cpu_r[C28X_REG_XAR7], a->imm8);
+    return true;
+}
+
 static bool trans_SETC_mode(DisasContext* ctx, arg_SETC_mode* a) {
     C28X_SETC_MODE(cpu_sr, a->mode);
 
@@ -2035,6 +2076,23 @@ static bool trans_MOVA_t_loc16(DisasContext* ctx, arg_MOVA_t_loc16* a) {
     // ACC = ACC + P << PM;
     ADD_TO_ACC_WITH_FLAGS(cpu_r[C28X_REG_P], cpu_sr[PM_FLAG]);
 
+    return true;
+}
+
+static bool trans_MOVB_loc16_imm8_cond(DisasContext* ctx, arg_MOVB_loc16_imm8_cond* a) {
+    // > Addressing modes are not conditionally executed;
+    // > therefore, if an addressing mode performs a pre or post-modification,
+    // > it will execute regardless of whether the condition is ture or not
+    // So we perform a Read-Modify-Write operation, we take loc16 value out and decide to write back which one
+    TCGv cond = tcg_temp_new_i32();
+    c28x_gen_test_condition(a->cond, cond, cpu_sr);
+    TCGv loc16_value = tcg_temp_new_i32();
+    C28X_READ_LOC16_RMW(a->loc16, loc16_value);
+    IF_CONDi(cond_set, TCG_COND_NE, cond, 0)
+    C28X_WRITE_LOC16_RMW(a->loc16, tcg_constant_tl(a->imm8));
+    ELSE(cond_set)
+    C28X_WRITE_LOC16_RMW(a->loc16, loc16_value);
+    ENDIF(cond_set)
     return true;
 }
 

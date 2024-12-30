@@ -3,7 +3,7 @@
 &loc32               loc32
 &ax_loc16            ax loc16
 &imm8                imm8
-&ax_imm8s            ax imm8s
+&ax_imm8            ax imm8
 &imm7                imm7
 &ax_shft             ax shft
 &ax                  ax
@@ -12,12 +12,13 @@
 &xarn                xarn
 &imm10               imm10
 &arn_loc16           arn loc16
+&xarn_imm8           xarn imm8
 
 @op_ADDB_xarn_imm7   .... . xarn:3 . imm7:7                        &xarn_imm7
 @op_loc16            .... .... loc16:8                             &loc16
 @op_ax_loc16         .... ... ax:1 loc16:8                         &ax_loc16
 @op_imm8             .... .... imm8:8                              &imm8
-@op_ax_imm8s         .... ... ax:1 imm8s:8                         &ax_imm8s
+@op_ax_imm8          .... ... ax:1 imm8:8                          &ax_imm8
 @op_imm7             .... .... . imm7:7                            &imm7
 @op_loc32            .... .... loc32:8                             &loc32
 @op_ax_shft          .... .... ... ax:1 shft:4                     &ax_shft
@@ -27,6 +28,7 @@
 @op_xarn             .... .... .... . xarn:3                       &xarn
 @op_imm10            .... .. imm10:10                              &imm10
 @op_arn_loc16        .... . arn:3 loc16:8                          &arn_loc16
+@op_xarn_imm8        .... . xarn:3 imm8:8                          &xarn_imm8
 
 ABS_acc              1111 1111 0101 0110
 ABSTC_acc            0101 0110 0101 1111
@@ -35,7 +37,7 @@ ADD_acc_loc16_shl16  0000 0101 .... ....                           @op_loc16
 ADD_ax_loc16         1001 010. .... ....                           @op_ax_loc16
 ADD_loc16_ax         0111 001. .... ....                           @op_ax_loc16
 ADD_acc_imm8         0000 1001 .... ....                           @op_imm8
-ADDB_ax_imm8s        1001 110. .... ....                           @op_ax_imm8s
+ADDB_ax_imm8         1001 110. .... ....                           @op_ax_imm8
 ADDB_sp_imm7         1111 1110 0... ....                           @op_imm7
 ADDB_xarn_7bit       1101 1... 0... ....                           @op_ADDB_xarn_imm7
 ADDCU_acc_loc16      0000 1100 .... ....                           @op_loc16
@@ -46,7 +48,7 @@ ADRK_imm8            1111 1100 .... ....                           @op_imm8
 AND_acc_loc16        1000 1001 .... ....                           @op_loc16
 AND_loc16_ax         1100 000. .... ....                           @op_ax_loc16
 AND_ax_loc16         1100 111. .... ....                           @op_ax_loc16
-AND_ax_imm8s         1001 000. .... ....                           @op_ax_imm8s    
+AND_ax_imm8          1001 000. .... ....                           @op_ax_imm8    
 
 ASP                  0111 0110 0001 1011
 
@@ -67,7 +69,7 @@ CLRC_mode            0010 1001 .... ....                           @op_mode
 
 CMP_ax_loc16         0101 010. .... ....                           @op_ax_loc16
 CMP64_acc_p          0101 0110 0101 1110
-CMPB_ax_imm8         0101 001. .... ....                           @op_ax_imm8s
+CMPB_ax_imm8         0101 001. .... ....                           @op_ax_imm8
 CMPL_acc_loc32       0000 1111 .... ....                           @op_loc32
 CMPL_acc_p_pm        1111 1111 0101 1001 
 CMPR0                0101 0110 0001 1101
@@ -130,6 +132,16 @@ MOV_xarn_pc          0011 1110 0101 1...                           @op_xarn
 
 MOVA_t_loc16         0001 0000 .... ....                           @op_loc16
 MOVAD_t_loc16        1010 0111 .... ....                           @op_loc16
+
+MOVB_acc_imm8        0000 0010 .... ....                           @op_imm8
+MOVB_ax_imm8         1001 101. .... ....                           @op_ax_imm8
+{
+  MOVB_ar6_imm8        1101 0110 .... ....                           @op_imm8
+  MOVB_ar7_imm8        1101 0111 .... ....                           @op_imm8
+  MOVB_xarn_imm8       1101 0... .... ....                           @op_xarn_imm8
+}
+MOVB_xar6_imm8       1011 1110 .... ....                           @op_imm8
+MOVB_xar7_imm8       1011 0110 .... ....                           @op_imm8
 
 SETC_mode            0011 1011 .... ....                           @op_mode
 SETC_xf              0101 0110 0010 0110

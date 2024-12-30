@@ -13,6 +13,7 @@
 &loc16_imm16            loc16 imm16
 &shft3_loc16            shft3 loc16
 &ax_cond_loc16          ax cond loc16
+&cond_imm8_loc16        cond imm8 loc16
 
 @op_imm22               .... .... .. imm22:22                               &imm22
 @op_shft_imm16          .... .... .... shft:4 imm16:16                      &shft_imm16
@@ -30,6 +31,7 @@
 @op_loc16_imm16         .... .... loc16:8 imm16:16                          &loc16_imm16
 @op_shft3_loc16         .... .... .... .... .... . shft3:3 loc16:8          &shft3_loc16
 @op_ax_cond_loc16       .... .... .... ... ax:1 .... cond:4 loc16:8         &ax_cond_loc16
+@op_cond_imm8_loc16     .... .... .... cond:4 imm8:8 loc16:8                &cond_imm8_loc16
 
 ADD_acc_imm16_shft      1111 1111 0001 .... .... .... .... ....             @op_shft_imm16
 ADD_acc_loc16_t         0101 0110 0010 0011 0000 0000 .... ....             @op_loc16
@@ -67,5 +69,7 @@ MOV_loc16_acc_shft      0101 0110 0010 1101 0000 0... .... ....             @op_
 MOV_loc16_ax_cond       0101 0110 0010 101. 0000 .... .... ....             @op_ax_cond_loc16
 MOV_loc16_ovc           0101 0110 0010 1001 0000 0000 .... ....             @op_loc16
 MOV_ovc_loc16           0101 0110 0000 0010 0000 0000 .... ....             @op_loc16
+
+MOVB_loc16_imm8_cond    0101 0110 1011 .... .... .... .... ....             @op_cond_imm8_loc16
 
 MOVL_xar0_imm22         1000 1101 00.. .... .... .... .... ....             @op_imm22
