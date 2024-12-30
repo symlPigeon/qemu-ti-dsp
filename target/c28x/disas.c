@@ -292,5 +292,16 @@ INSN(MOVL_xt_loc32, MOVL, "XT, %s", LOC(a->loc32))
 
 // Load T and Store P
 INSN(MOVP_t_loc16, MOVP, "T, %s", LOC(a->loc16))
+// Load T and subtract
+INSN(MOVS_t_loc16, MOVS, "T, %s", LOC(a->loc16))
+// Load ACC
+INSN(MOVU_acc_loc16, MOVU, "ACC, %s", LOC(a->loc16))
+// Store OVC
+INSN(MOVU_loc16_ovc, MOVU, "%s, OVC", LOC(a->loc16))
+// Load OVC
+INSN(MOVU_ovc_loc16, MOVU, "OVC, %s", LOC(a->loc16))
+// Load DP
+INSN(MOVW_dp_imm16, MOVW, "DP, #0x%04x", a->imm16)
 
-INSN(SETC_mode, SETC, "%s", MODE(a->mode)) INSN(SETC_xf, SETC, "XF")
+INSN(SETC_mode, SETC, "%s", MODE(a->mode))
+INSN(SETC_xf, SETC, "XF")

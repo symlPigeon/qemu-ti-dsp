@@ -1695,6 +1695,24 @@ static bool trans_MOVP_t_loc16(DisasContext* ctx, arg_MOVP_t_loc16* a) {
     return true;
 }
 
+static bool trans_MOVS_t_loc16(DisasContext* ctx, arg_MOVS_t_loc16* a) {
+    TCGv target_value = tcg_temp_new_i32();
+    C28X_READ_LOC16(a->loc16, target_value);
+    WRITE_REG_T(target_value);
+    TCGv sub_value = tcg_temp_new_i32();
+    tcg_gen_shl_tl(sub_value, cpu_r[C28X_REG_P], cpu_sr[PM_FLAG]);
+    tcg_gen_neg_tl(sub_value, sub_value);
+    ADD_TO_ACC_WITH_FLAGS_NO_SXM(sub_value, 0)
+    return true;
+}
+
+static bool trans_MOVU_acc_loc16(DisasContext* ctx, arg_MOVU_acc_loc16* a) {
+    C28X_READ_LOC16(a->loc16, cpu_r[C28X_REG_ACC]);
+    gen_set_z_flag(cpu_r[C28X_REG_ACC]);
+    tcg_gen_movi_tl(cpu_sr[N_FLAG], 0);
+    return true;
+}
+
 static bool trans_SETC_mode(DisasContext* ctx, arg_SETC_mode* a) {
     C28X_SETC_MODE(cpu_sr, a->mode);
 
@@ -2239,6 +2257,22 @@ MOV_XAR_IMM(5)
 MOV_XAR_IMM(6)
 MOV_XAR_IMM(7)
 #undef MOV_XAR_IMM
+
+static bool trans_MOVU_loc16_ovc(DisasContext* ctx, arg_MOVU_loc16_ovc* a) {
+    C28X_WRITE_LOC16(a->loc16, cpu_sr[OVC_FLAG]);
+    CHECK_DST_AX_NZ(a->loc16, cpu_sr[OVC_FLAG])
+    return true;
+}
+
+static bool trans_MOVU_ovc_loc16(DisasContext* ctx, arg_MOVU_ovc_loc16* a) {
+    C28X_READ_LOC16(a->loc16, cpu_sr[OVC_FLAG]);
+    return true;
+}
+
+static bool trans_MOVW_dp_imm16(DisasContext* ctx, arg_MOVW_dp_imm16* a) {
+    tcg_gen_movi_tl(cpu_r[C28X_REG_DP], a->imm16);
+    return true;
+}
 
 // ==============================================
 // ============== TRANSLATION END ===============

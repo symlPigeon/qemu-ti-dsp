@@ -179,5 +179,8 @@ MOVL_xt_loc32        1000 0111 .... ....                           @op_loc32
   MOVL_acc_p_pm        0001 0110 1010 1100
   MOVP_t_loc16         0001 0110 .... ....                           @op_loc16
 }
+MOVS_t_loc16         0001 0001 .... ....                           @op_loc16
+MOVU_acc_loc16       0000 1110 .... ....                           @op_loc16
+
 SETC_mode            0011 1011 .... ....                           @op_mode
 SETC_xf              0101 0110 0010 0110
