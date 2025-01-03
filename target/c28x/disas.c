@@ -318,6 +318,41 @@ INSN(MPY_p_t_loc16, MPY, "P, T, %s", LOC(a->loc16))
 // 16-bit Multiply and Add Previous Product
 INSN(MPYA_p_loc16_imm16, MPYA, "P, %s, #0x%04x", LOC(a->loc16), a->imm16)
 INSN(MPYA_p_t_loc16, MPYA, "P, T, %s", LOC(a->loc16))
+// Multiply 8-bit
+INSN(MPYB_acc_t_imm8, MPYB, "ACC, T, #0x%02x", a->imm8)
+INSN(MPYB_p_t_imm8, MPYB, "P, T, #0x%02x", a->imm8)
+// 16-bit Multiply and Subtract
+INSN(MPYS_p_t_loc16, MPYS, "P, T, %s", LOC(a->loc16))
+// 16-bit Unsigned Multiply
+INSN(MPYU_p_t_loc16, MPYU, "P, T, %s", LOC(a->loc16))
+INSN(MPYU_acc_t_loc16, MPYU, "ACC, T, %s", LOC(a->loc16))
+// 16-bit Signed x Unsigned Multiply
+INSN(MPYXU_acc_t_loc16, MPYXU, "ACC, T, %s", LOC(a->loc16))
+INSN(MPYXU_p_t_loc16, MPYXU, "P, T, %s", LOC(a->loc16))
+
+// Unalign Stack Pointer
+INSN(NASP, NASP, "")
+
+// Neg
+INSN(NEG_acc, NEG, "ACC")
+INSN(NEG_ax, NEG, "%s", AX(a->ax))
+INSN(NEG64_acc_p, NEG64, "ACC:P")
+INSN(NEGTC_acc, NEGTC, "ACC")
+
+// Not
+INSN(NOT_acc, NOT, "ACC")
+INSN(NOT_ax, NOT, "%s", AX(a->ax))
+
+// OR
+INSN(OR_acc_loc16, OR, "ACC, %s", LOC(a->loc16))
+INSN(OR_acc_imm16_shft, OR, "ACC, #0x%04x << #%d", a->imm16, a->shft)
+INSN(OR_acc_imm16_shft16, OR, "ACC, #0x%04x << #16", a->imm16)
+INSN(OR_ax_loc16, OR, "%s, %s", AX(a->ax), LOC(a->loc16))
+INSN(OR_ier_imm16, OR, "IER, #0x%04x", a->imm16)
+INSN(OR_ifr_imm16, OR, "IFR, #0x%04x", a->imm16)
+INSN(OR_loc16_imm16, OR, "%s, #0x%04x", LOC(a->loc16), a->imm16)
+INSN(OR_loc16_ax, OR, "%s, %s", LOC(a->loc16), AX(a->ax))
+INSN(ORB_ax_imm8, ORB, "%s, #0x%02x", AX(a->ax), a->imm8)
 
 INSN(SETC_mode, SETC, "%s", MODE(a->mode))
 INSN(SETC_xf, SETC, "XF")

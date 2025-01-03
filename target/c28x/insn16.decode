@@ -192,5 +192,28 @@ MPY_acc_t_loc16      0001 0010 .... ....                           @op_loc16
 MPY_p_t_loc16        0011 0011 .... ....                           @op_loc16
 MPYA_p_t_loc16       0001 0111 .... ....                           @op_loc16
 
+MPYB_acc_t_imm8      0011 0101 .... ....                           @op_imm8
+MPYB_p_t_imm8        0011 0001 .... ....                           @op_imm8
+MPYS_p_t_loc16       0001 0011 .... ....                           @op_loc16
+MPYU_p_t_loc16       0011 0111 .... ....                           @op_loc16  
+MPYU_acc_t_loc16     0011 0110 .... ....                           @op_loc16 
+MPYXU_acc_t_loc16    0011 0000 .... ....                           @op_loc16  
+MPYXU_p_t_loc16      0011 0010 .... ....                           @op_loc16
+
+NASP                 0111 0110 0001 0111
+
+NEG_acc              1111 1111 0101 0100
+NEG_ax               1111 1111 0101 110.                           @op_ax
+NEG64_acc_p          0101 0110 0101 1000
+NEGTC_acc            0101 0110 0011 0010
+
+NOT_acc              1111 1111 0101 0101
+NOT_ax               1111 1111 0101 111.                           @op_ax
+
+OR_acc_loc16         1010 1111 .... ....                           @op_loc16
+OR_ax_loc16          1100 101. .... ....                           @op_ax_loc16
+OR_loc16_ax          1001 100. .... ....                           @op_ax_loc16 
+ORB_ax_imm8          0101 000. .... ....                           @op_ax_imm8
+
 SETC_mode            0011 1011 .... ....                           @op_mode
 SETC_xf              0101 0110 0010 0110
