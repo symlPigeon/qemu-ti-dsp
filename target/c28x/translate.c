@@ -320,6 +320,35 @@ inline static void gen_and_dst(TCGv dst, TCGv mask, bool check_flag) {
         SET_NZ_FLAGS(cpu_r[C28X_REG_ACC]);                                                                             \
     }
 
+#define MPY_16S(dst, mul1, mul2)                                                                                       \
+    tcg_gen_ext16s_tl(mul1, mul1);                                                                                     \
+    tcg_gen_ext16s_tl(mul2, mul2);                                                                                     \
+    tcg_gen_mul_tl(dst, mul1, mul2);
+
+inline static void get_p_shft_pm(TCGv dst) {
+    TCGLabel* labels[8];
+    TCGLabel* label_end = gen_new_label();
+    for (uint32_t i = 0; i < 8; i++) {
+        labels[i] = gen_new_label();
+        tcg_gen_brcondi_tl(TCG_COND_EQ, cpu_sr[PM_FLAG], i, labels[i]);
+    }
+    // PM = 0, Left Shift 1
+    gen_set_label(labels[0]);
+    tcg_gen_shli_tl(dst, cpu_r[C28X_REG_P], 1);
+    tcg_gen_br(label_end);
+    // PM = 1, No Shift
+    gen_set_label(labels[1]);
+    tcg_gen_mov_tl(dst, cpu_r[C28X_REG_P]);
+    tcg_gen_br(label_end);
+    for (uint32_t i = 2; i < 8; i++) {
+        // PM = 2..7, right shift by i - 1
+        gen_set_label(labels[i]);
+        tcg_gen_sari_tl(dst, cpu_r[C28X_REG_P], i - 1);
+        tcg_gen_br(label_end);
+    }
+    gen_set_label(label_end);
+}
+
 #include "decode-insn16.c.inc"
 
 // ==============================================
@@ -905,7 +934,7 @@ static bool trans_CMPL_acc_loc32(DisasContext* ctx, arg_CMPL_acc_loc32* a) {
 
 static bool trans_CMPL_acc_p_pm(DisasContext* ctx, arg_CMPL_acc_p_pm* a) {
     TCGv shft_p = tcg_temp_new_i32();
-    tcg_gen_shr_tl(shft_p, cpu_r[C28X_REG_P], cpu_sr[PM_FLAG]);
+    get_p_shft_pm(shft_p);
     TCGv result = tcg_temp_new_i32();
     tcg_gen_sub_tl(result, cpu_r[C28X_REG_ACC], shft_p);
     tcg_gen_setcond_tl(TCG_COND_GE, cpu_sr[C_FLAG], cpu_r[C28X_REG_ACC], shft_p);
@@ -1462,8 +1491,7 @@ static bool trans_MOV_loc16_ier(DisasContext* ctx, arg_MOV_loc16_ier* a) {
 
 static bool trans_MOV_loc16_p(DisasContext* ctx, arg_MOV_loc16_p* a) {
     TCGv target_value = tcg_temp_new_i32();
-    tcg_gen_andi_tl(target_value, cpu_r[C28X_REG_P], 0xffff);
-    tcg_gen_shl_tl(target_value, target_value, cpu_sr[PM_FLAG]);
+    get_p_shft_pm(target_value);
     tcg_gen_andi_tl(target_value, target_value, 0xffff);
     C28X_WRITE_LOC16(a->loc16, target_value);
     CHECK_DST_AX_NZ(a->loc16, target_value);
@@ -1536,7 +1564,9 @@ static bool trans_MOVAD_t_loc16(DisasContext* ctx, arg_MOVAD_t_loc16* a) {
     if (desc->post_hook) desc->post_hook(desc);
     g_free(desc);
     // ACC = ACC + P << PM;
-    ADD_TO_ACC_WITH_FLAGS_NO_SXM(cpu_r[C28X_REG_P], cpu_sr[PM_FLAG])
+    TCGv shft_p = tcg_temp_new_i32();
+    get_p_shft_pm(shft_p);
+    ADD_TO_ACC_WITH_FLAGS_NO_SXM(shft_p, tcg_constant_tl(0))
     return true;
 }
 
@@ -1611,7 +1641,7 @@ static bool trans_MOVH_loc16_acc_shft1(DisasContext* ctx, arg_MOVH_loc16_acc_shf
 
 static bool trans_MOVH_loc16_p(DisasContext* ctx, arg_MOVH_loc16_p* a) {
     TCGv target_value = tcg_temp_new_i32();
-    tcg_gen_shl_tl(target_value, cpu_r[C28X_REG_P], cpu_sr[PM_FLAG]);
+    get_p_shft_pm(target_value);
     tcg_gen_shri_tl(target_value, target_value, 16);
     C28X_WRITE_LOC16(a->loc16, target_value);
     CHECK_DST_AX_NZ(a->loc16, target_value);
@@ -1625,7 +1655,7 @@ static bool trans_MOVL_acc_loc32(DisasContext* ctx, arg_MOVL_acc_loc32* a) {
 }
 
 static bool trans_MOVL_acc_p_pm(DisasContext* ctx, arg_MOVL_acc_p_pm* a) {
-    tcg_gen_shl_tl(cpu_r[C28X_REG_ACC], cpu_r[C28X_REG_P], cpu_sr[PM_FLAG]);
+    get_p_shft_pm(cpu_r[C28X_REG_ACC]);
     SET_NZ_FLAGS(cpu_r[C28X_REG_ACC])
     return true;
 }
@@ -1690,7 +1720,7 @@ static bool trans_MOVP_t_loc16(DisasContext* ctx, arg_MOVP_t_loc16* a) {
     TCGv target_value = tcg_temp_new_i32();
     C28X_READ_LOC16(a->loc16, target_value);
     WRITE_REG_T(target_value);
-    tcg_gen_shl_tl(cpu_r[C28X_REG_P], cpu_r[C28X_REG_P], cpu_sr[PM_FLAG]);
+    get_p_shft_pm(cpu_r[C28X_REG_P]);
     SET_NZ_FLAGS(cpu_r[C28X_REG_ACC]);
     return true;
 }
@@ -1700,7 +1730,7 @@ static bool trans_MOVS_t_loc16(DisasContext* ctx, arg_MOVS_t_loc16* a) {
     C28X_READ_LOC16(a->loc16, target_value);
     WRITE_REG_T(target_value);
     TCGv sub_value = tcg_temp_new_i32();
-    tcg_gen_shl_tl(sub_value, cpu_r[C28X_REG_P], cpu_sr[PM_FLAG]);
+    get_p_shft_pm(sub_value);
     tcg_gen_neg_tl(sub_value, sub_value);
     ADD_TO_ACC_WITH_FLAGS_NO_SXM(sub_value, 0)
     return true;
@@ -1712,6 +1742,47 @@ static bool trans_MOVU_acc_loc16(DisasContext* ctx, arg_MOVU_acc_loc16* a) {
     tcg_gen_movi_tl(cpu_sr[N_FLAG], 0);
     return true;
 }
+
+static bool trans_MOVZ_ar_loc16(DisasContext* ctx, arg_MOVZ_ar_loc16* a) {
+    C28X_READ_LOC16(a->loc16, cpu_r[C28X_REG_XAR0 + a->arn]);
+    return true;
+}
+
+static bool trans_MOVZ_ar6_loc16(DisasContext* ctx, arg_MOVZ_ar6_loc16* a) {
+    C28X_READ_LOC16(a->loc16, cpu_r[C28X_REG_XAR6]);
+    return true;
+}
+
+static bool trans_MOVZ_ar7_loc16(DisasContext* ctx, arg_MOVZ_ar7_loc16* a) {
+    C28X_READ_LOC16(a->loc16, cpu_r[C28X_REG_XAR7])
+    return true;
+}
+
+static bool trans_MOVZ_dp_imm10(DisasContext* ctx, arg_MOVZ_dp_imm10* a) {
+    tcg_gen_movi_tl(cpu_r[C28X_REG_DP], a->imm10);
+    return true;
+}
+
+static bool trans_MPY_acc_t_loc16(DisasContext* ctx, arg_MPY_acc_t_loc16* a) {
+    TCGv mul1 = tcg_temp_new_i32();
+    TCGv mul2 = tcg_temp_new_i32();
+    C28X_READ_LOC16(a->loc16, mul2);
+    tcg_gen_shri_tl(mul1, cpu_r[C28X_REG_XT], 16);
+    MPY_16S(cpu_r[C28X_REG_ACC], mul1, mul2)
+    SET_NZ_FLAGS(cpu_r[C28X_REG_ACC])
+    return true;
+}
+
+static bool trans_MPY_p_t_loc16(DisasContext* ctx, arg_MPY_p_t_loc16* a) {
+    TCGv mul1 = tcg_temp_new_i32();
+    TCGv mul2 = tcg_temp_new_i32();
+    tcg_gen_shri_tl(mul1, cpu_r[C28X_REG_XT], 16);
+    C28X_READ_LOC16(a->loc16, mul2);
+    MPY_16S(cpu_r[C28X_REG_P], mul1, mul2);
+    return true;
+}
+
+static bool trans_MPYA_p_t_loc16(DisasContext* ctx, arg_MPYA_p_t_loc16* a) { return true; }
 
 static bool trans_SETC_mode(DisasContext* ctx, arg_SETC_mode* a) {
     C28X_SETC_MODE(cpu_sr, a->mode);
@@ -1751,8 +1822,7 @@ static bool trans_ADD_acc_imm16_shft(DisasContext* ctx, arg_ADD_acc_imm16_shft* 
 static bool trans_ADD_acc_loc16_t(DisasContext* ctx, arg_ADD_acc_loc16_t* a) {
     TCGv target_value = tcg_temp_new_i32();
     C28X_READ_LOC16(a->loc16, target_value);
-    TCGv t = tcg_temp_new_i32();
-    tcg_gen_shri_tl(t, cpu_r[C28X_REG_XT], 16);
+    REG_T(t, 16)
 
     ADD_TO_ACC_WITH_FLAGS(target_value, t)
 
@@ -1797,6 +1867,14 @@ static bool trans_ADD_loc16_s16(DisasContext* ctx, arg_ADD_loc16_s16* a) {
     tcg_gen_xor_tl(overflow_2, add_sum, adder_1);
     tcg_gen_and_tl(cpu_sr[V_FLAG], overflow_1, overflow_2);
 
+    return true;
+}
+
+static bool trans_ADDCL_acc_loc32(DisasContext* ctx, arg_ADDCL_acc_loc32* a) {
+    TCGv target_value = tcg_temp_new_i32();
+    C28X_READ_LOC32(a->loc32, target_value);
+    tcg_gen_add_tl(target_value, target_value, cpu_sr[C_FLAG]);
+    ADD_TO_ACC_WITH_FLAGS(target_value, 0)
     return true;
 }
 
@@ -2196,7 +2274,9 @@ static bool trans_MOVA_t_loc16(DisasContext* ctx, arg_MOVA_t_loc16* a) {
     tcg_gen_andi_tl(cpu_r[C28X_REG_XT], cpu_r[C28X_REG_XT], 0xffff);
     tcg_gen_or_tl(cpu_r[C28X_REG_XT], cpu_r[C28X_REG_XT], target_value);
     // ACC = ACC + P << PM;
-    ADD_TO_ACC_WITH_FLAGS(cpu_r[C28X_REG_P], cpu_sr[PM_FLAG]);
+    TCGv add_value = tcg_temp_new_i32();
+    get_p_shft_pm(add_value);
+    ADD_TO_ACC_WITH_FLAGS_NO_SXM(add_value, tcg_constant_tl(0))
 
     return true;
 }
@@ -2271,6 +2351,36 @@ static bool trans_MOVU_ovc_loc16(DisasContext* ctx, arg_MOVU_ovc_loc16* a) {
 
 static bool trans_MOVW_dp_imm16(DisasContext* ctx, arg_MOVW_dp_imm16* a) {
     tcg_gen_movi_tl(cpu_r[C28X_REG_DP], a->imm16);
+    return true;
+}
+
+static bool trans_MOVX_tl_loc16(DisasContext* ctx, arg_MOVX_tl_loc16* a) {
+    C28X_READ_LOC32(a->loc16, cpu_r[C28X_REG_XT]);
+    tcg_gen_ext16s_tl(cpu_r[C28X_REG_XT], cpu_r[C28X_REG_XT]);
+    return true;
+}
+
+static bool trans_MPY_acc_loc16_imm16(DisasContext* ctx, arg_MPY_acc_loc16_imm16* a) {
+    TCGv target_value = tcg_temp_new_i32();
+    C28X_READ_LOC16(a->loc16, target_value);
+    WRITE_REG_T(target_value);
+    TCGv mul = tcg_temp_new_i32();
+    tcg_gen_movi_tl(mul, a->imm16);
+    MPY_16S(cpu_r[C28X_REG_ACC], mul, target_value);
+    SET_NZ_FLAGS(cpu_r[C28X_REG_ACC]);
+    return true;
+}
+
+static bool trans_MPYA_p_loc16_imm16(DisasContext* ctx, arg_MPYA_p_loc16_imm16* a) {
+    TCGv add_value = tcg_temp_new_i32();
+    get_p_shft_pm(add_value);
+    ADD_TO_ACC_WITH_FLAGS_NO_SXM(add_value, tcg_constant_tl(0))
+    TCGv target_value = tcg_temp_new_i32();
+    C28X_READ_LOC16(a->loc16, target_value);
+    WRITE_REG_T(target_value);
+    TCGv mul = tcg_temp_new_i32();
+    tcg_gen_movi_tl(mul, a->imm16);
+    MPY_16S(cpu_r[C28X_REG_P], mul, target_value);
     return true;
 }
 

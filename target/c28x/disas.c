@@ -93,6 +93,7 @@ INSN(ADD_acc_imm8, ADD, "ACC, #0x%02x", a->imm8)
 INSN(ADDB_ax_imm8, ADDB, "%s, #%hd", AX(a->ax), a->imm8)
 INSN(ADDB_sp_imm7, ADDB, "SP, #%d", a->imm7)
 INSN(ADDB_xarn_7bit, ADDB, "%s, 0x%x", XARn(a->xarn), a->imm7)
+INSN(ADDCL_acc_loc32, ADDCL, "ACC, %s", LOC(a->loc32))
 INSN(ADDCU_acc_loc16, ADDCU, "ACC, %s", LOC(a->loc16))
 INSN(ADDL_acc_loc32, ADDL, "ACC, %s", LOC(a->loc32))
 INSN(ADDL_loc32_acc, ADDL, "%s, ACC", LOC(a->loc32))
@@ -302,6 +303,21 @@ INSN(MOVU_loc16_ovc, MOVU, "%s, OVC", LOC(a->loc16))
 INSN(MOVU_ovc_loc16, MOVU, "OVC, %s", LOC(a->loc16))
 // Load DP
 INSN(MOVW_dp_imm16, MOVW, "DP, #0x%04x", a->imm16)
+// Load low half xt with sign extension
+INSN(MOVX_tl_loc16, MOVX, "TL, %s", LOC(a->loc16))
+// Load and clear high bits
+INSN(MOVZ_ar_loc16, MOVZ, "AR%d, %s", a->arn, LOC(a->loc16))
+INSN(MOVZ_ar6_loc16, MOVZ, "AR6, %s", LOC(a->loc16))
+INSN(MOVZ_ar7_loc16, MOVZ, "AR7, %s", LOC(a->loc16))
+INSN(MOVZ_dp_imm10, MOVZ, "DP, #0x%x", a->imm10)
+
+// 16-bit Multiply
+INSN(MPY_acc_loc16_imm16, MPY, "ACC, %s, #0x%04x", LOC(a->loc16), a->imm16)
+INSN(MPY_acc_t_loc16, MPY, "ACC, T, %s", LOC(a->loc16))
+INSN(MPY_p_t_loc16, MPY, "P, T, %s", LOC(a->loc16))
+// 16-bit Multiply and Add Previous Product
+INSN(MPYA_p_loc16_imm16, MPYA, "P, %s, #0x%04x", LOC(a->loc16), a->imm16)
+INSN(MPYA_p_t_loc16, MPYA, "P, T, %s", LOC(a->loc16))
 
 INSN(SETC_mode, SETC, "%s", MODE(a->mode))
 INSN(SETC_xf, SETC, "XF")

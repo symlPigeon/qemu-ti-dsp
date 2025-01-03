@@ -111,8 +111,6 @@ LSRL_acc_t           0101 0110 0010 0010
 
 MOV_acc_loc16        1000 0101 .... ....                           @op_loc16
 MOV_acc_loc16_shft16 0010 0101 .... ....                           @op_loc16
-MOV_ar6_loc16        0101 1110 .... ....                           @op_loc16
-MOV_ar7_loc16        0101 1111 .... ....                           @op_loc16
 MOV_ax_loc16         1001 001. .... ....                           @op_ax_loc16
 MOV_dp_imm10         1111 10.. .... ....                           @op_imm10
 MOV_ier_loc16        0010 0011 .... ....                           @op_loc16
@@ -181,6 +179,18 @@ MOVL_xt_loc32        1000 0111 .... ....                           @op_loc32
 }
 MOVS_t_loc16         0001 0001 .... ....                           @op_loc16
 MOVU_acc_loc16       0000 1110 .... ....                           @op_loc16
+{
+  MOV_ar6_loc16        0101 1110 .... ....                           @op_loc16
+  MOV_ar7_loc16        0101 1111 .... ....                           @op_loc16
+  MOVZ_ar_loc16        0101 1... .... ....                           @op_arn_loc16
+}
+MOVZ_ar6_loc16       1000 1000 .... ....                           @op_loc16
+MOVZ_ar7_loc16       1000 0000 .... ....                           @op_loc16
+MOVZ_dp_imm10        1011 10.. .... ....                           @op_imm10
+
+MPY_acc_t_loc16      0001 0010 .... ....                           @op_loc16
+MPY_p_t_loc16        0011 0011 .... ....                           @op_loc16
+MPYA_p_t_loc16       0001 0111 .... ....                           @op_loc16
 
 SETC_mode            0011 1011 .... ....                           @op_mode
 SETC_xf              0101 0110 0010 0110
