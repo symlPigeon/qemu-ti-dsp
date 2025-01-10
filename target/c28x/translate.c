@@ -386,6 +386,13 @@ inline static void gen_pop_value_length(TCGv dst, uint8_t length) {
     tcg_gen_qemu_ld_tl(dst, stk_addr, 0, length == 1 ? MO_16 : MO_32);
 }
 
+inline static void gen_push_value_length(TCGv value, uint8_t length) {
+    TCGv stk_addr = tcg_temp_new_i32();
+    tcg_gen_muli_tl(stk_addr, cpu_r[C28X_REG_SP], 2);
+    tcg_gen_qemu_st_tl(value, stk_addr, 0, length == 1 ? MO_16 : MO_32);
+    tcg_gen_addi_tl(cpu_r[C28X_REG_SP], cpu_r[C28X_REG_SP], length);
+}
+
 #include "decode-insn16.c.inc"
 
 // ==============================================
@@ -454,7 +461,7 @@ static bool trans_ABSTC_acc(DisasContext* ctx, arg_ABSTC_acc* a) {
 static bool trans_ADD_acc_loc16(DisasContext* ctx, arg_ADD_acc_loc16* a) {
     TCGv target_value = tcg_temp_new_i32();
     C28X_READ_LOC16(a->loc16, target_value);
-    TCGv shft = tcg_constant_i32(0);
+    TCGv shft = tcg_constant_tl(0);
 
     ADD_TO_ACC_WITH_FLAGS(target_value, shft)
 
@@ -464,7 +471,7 @@ static bool trans_ADD_acc_loc16(DisasContext* ctx, arg_ADD_acc_loc16* a) {
 static bool trans_ADD_acc_loc16_shl16(DisasContext* ctx, arg_ADD_acc_loc16_shl16* a) {
     TCGv target_value = tcg_temp_new_i32();
     C28X_READ_LOC16(a->loc16, target_value);
-    TCGv shft = tcg_constant_i32(16);
+    TCGv shft = tcg_constant_tl(16);
 
     ADD_TO_ACC_WITH_FLAGS(target_value, shft)
 
@@ -2167,6 +2174,126 @@ POP_XAR(7)
 
 static bool trans_POP_xt(DisasContext* ctx, arg_POP_xt* a) {
     gen_pop_value_length(cpu_r[C28X_REG_XT], 2);
+    return true;
+}
+
+static bool trans_PUSH_acc(DisasContext* ctx, arg_PUSH_acc* a) {
+    gen_push_value_length(cpu_r[C28X_REG_ACC], 2);
+    return true;
+}
+
+static bool trans_PUSH_ar1_ar0(DisasContext* ctx, arg_PUSH_ar1_ar0* a) {
+    REG_LO_R(value0, cpu_r[C28X_REG_XAR0]);
+    gen_push_value_length(value0, 1);
+    REG_LO_R(value1, cpu_r[C28X_REG_XAR1]);
+    gen_push_value_length(value1, 1);
+    return true;
+}
+
+static bool trans_PUSH_ar3_ar2(DisasContext* ctx, arg_PUSH_ar3_ar2* a) {
+    REG_LO_R(value2, cpu_r[C28X_REG_XAR2]);
+    gen_push_value_length(value2, 1);
+    REG_LO_R(value3, cpu_r[C28X_REG_XAR3]);
+    gen_push_value_length(value3, 1);
+    return true;
+}
+
+static bool trans_PUSH_ar5_ar4(DisasContext* ctx, arg_PUSH_ar5_ar4* a) {
+    REG_LO_R(value4, cpu_r[C28X_REG_XAR4]);
+    gen_push_value_length(value4, 1);
+    REG_LO_R(value5, cpu_r[C28X_REG_XAR5]);
+    gen_push_value_length(value5, 1);
+    return true;
+}
+
+static bool trans_PUSH_ar1h_ar0h(DisasContext* ctx, arg_PUSH_ar1h_ar0h* a) {
+    REG_HI_R(value0, cpu_r[C28X_REG_XAR0]);
+    gen_push_value_length(value0, 1);
+    REG_HI_R(value1, cpu_r[C28X_REG_XAR1]);
+    gen_push_value_length(value1, 1);
+    return true;
+}
+
+static bool trans_PUSH_dbgier(DisasContext* ctx, arg_PUSH_dbgier* a) {
+    gen_push_value_length(cpu_r[C28X_REG_DBGIER], 1);
+    return true;
+}
+
+static bool trans_PUSH_dp(DisasContext* ctx, arg_PUSH_dp* a) {
+    gen_push_value_length(cpu_r[C28X_REG_DP], 1);
+    return true;
+}
+
+static bool trans_PUSH_dp_st1(DisasContext* ctx, arg_PUSH_dp_st1* a) {
+    TCGv st1 = tcg_temp_new_i32();
+    c28x_pack_status_reg_1(st1, cpu_sr);
+    gen_push_value_length(st1, 1);
+    gen_push_value_length(cpu_r[C28X_REG_DP], 1);
+    return true;
+}
+
+static bool trans_PUSH_ifr(DisasContext* ctx, arg_PUSH_ifr* a) {
+    gen_push_value_length(cpu_r[C28X_REG_IFR], 1);
+    return true;
+}
+
+static bool trans_PUSH_loc16(DisasContext* ctx, arg_PUSH_loc16* a) {
+    TCGv value = tcg_temp_new_i32();
+    C28X_READ_LOC16(a->loc16, value);
+    gen_push_value_length(value, 1);
+    return true;
+}
+
+static bool trans_PUSH_p(DisasContext* ctx, arg_PUSH_p* a) {
+    gen_push_value_length(cpu_r[C28X_REG_P], 2);
+    return true;
+}
+
+static bool trans_PUSH_rpc(DisasContext* ctx, arg_PUSH_rpc* a) {
+    gen_push_value_length(cpu_r[C28X_REG_RPC], 2);
+    return true;
+}
+
+static bool trans_PUSH_st0(DisasContext* ctx, arg_PUSH_st0* a) {
+    TCGv st0 = tcg_temp_new_i32();
+    c28x_pack_status_reg_0(st0, cpu_sr);
+    gen_push_value_length(st0, 1);
+    return true;
+}
+
+static bool trans_PUSH_st1(DisasContext* ctx, arg_PUSH_st1* a) {
+    TCGv st1 = tcg_temp_new_i32();
+    c28x_pack_status_reg_1(st1, cpu_sr);
+    gen_push_value_length(st1, 1);
+    return true;
+}
+
+static bool trans_PUSH_t_st0(DisasContext* ctx, arg_PUSH_t_st0* a) {
+    TCGv st0 = tcg_temp_new_i32();
+    c28x_pack_status_reg_0(st0, cpu_sr);
+    gen_push_value_length(st0, 1);
+    REG_T(t, 16)
+    gen_push_value_length(t, 1);
+    return true;
+}
+
+#define PUSH_XAR(n)                                                                                                    \
+    static bool trans_PUSH_xar##n(DisasContext* ctx, arg_PUSH_xar##n* a) {                                             \
+        gen_push_value_length(cpu_r[C28X_REG_XAR##n], 2);                                                              \
+        return true;                                                                                                   \
+    }
+PUSH_XAR(0)
+PUSH_XAR(1)
+PUSH_XAR(2)
+PUSH_XAR(3)
+PUSH_XAR(4)
+PUSH_XAR(5)
+PUSH_XAR(6)
+PUSH_XAR(7)
+#undef PUSH_XAR
+
+static bool trans_PUSH_xt(DisasContext* ctx, arg_PUSH_xt* a) {
+    gen_push_value_length(cpu_r[C28X_REG_XT], 2);
     return true;
 }
 
