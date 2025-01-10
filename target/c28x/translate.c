@@ -278,6 +278,24 @@ inline static void gen_and_dst(TCGv dst, TCGv mask, bool check_flag) {
     }
 }
 
+#define REG_LO_R(name, reg)                                                                                            \
+    TCGv name = tcg_temp_new_i32();                                                                                    \
+    tcg_gen_andi_tl(name, reg, 0xffff);
+
+#define REG_HI_R(name, reg)                                                                                            \
+    TCGv name = tcg_temp_new_i32();                                                                                    \
+    tcg_gen_shri_tl(name, reg, 16);
+
+#define REG_LO_W(value, reg)                                                                                           \
+    tcg_gen_andi_tl(reg, reg, 0xffff0000);                                                                             \
+    tcg_gen_andi_tl(value, value, 0xffff);                                                                             \
+    tcg_gen_or_tl(reg, reg, value);
+
+#define REG_HI_W(value, reg)                                                                                           \
+    tcg_gen_andi_tl(reg, reg, 0x0000ffff);                                                                             \
+    tcg_gen_shli_tl(value, value, 16);                                                                                 \
+    tcg_gen_or_tl(reg, reg, value);
+
 #define REG_T(name, lsb)                                                                                               \
     TCGv name = tcg_temp_new_i32();                                                                                    \
     tcg_gen_shri_tl(name, cpu_r[C28X_REG_XT], 16);                                                                     \
@@ -300,13 +318,9 @@ inline static void gen_and_dst(TCGv dst, TCGv mask, bool check_flag) {
 
 #define REG_AX_W(value, AX)                                                                                            \
     if (AX) {                                                                                                          \
-        tcg_gen_andi_tl(cpu_r[C28X_REG_ACC], cpu_r[C28X_REG_ACC], 0x0000ffff);                                         \
-        tcg_gen_shli_tl(value, value, 16);                                                                             \
-        tcg_gen_or_tl(cpu_r[C28X_REG_ACC], cpu_r[C28X_REG_ACC], value);                                                \
+        REG_HI_W(value, cpu_r[C28X_REG_ACC])                                                                           \
     } else {                                                                                                           \
-        tcg_gen_andi_tl(value, value, 0xffff);                                                                         \
-        tcg_gen_andi_tl(cpu_r[C28X_REG_ACC], cpu_r[C28X_REG_ACC], 0xffff0000);                                         \
-        tcg_gen_or_tl(cpu_r[C28X_REG_ACC], cpu_r[C28X_REG_ACC], value);                                                \
+        REG_LO_W(value, cpu_r[C28X_REG_ACC])                                                                           \
     }
 
 #define LSL_TARGET_SHFT(dst, shft)                                                                                     \
@@ -363,6 +377,13 @@ inline static void get_p_shft_pm(TCGv dst) {
         tcg_gen_br(label_end);
     }
     gen_set_label(label_end);
+}
+
+inline static void gen_pop_value_length(TCGv dst, uint8_t length) {
+    tcg_gen_subi_tl(cpu_r[C28X_REG_SP], cpu_r[C28X_REG_SP], length);
+    TCGv stk_addr = tcg_temp_new_i32();
+    tcg_gen_muli_tl(stk_addr, cpu_r[C28X_REG_SP], 2);
+    tcg_gen_qemu_ld_tl(dst, stk_addr, 0, length == 1 ? MO_16 : MO_32);
 }
 
 #include "decode-insn16.c.inc"
@@ -1445,18 +1466,14 @@ static bool trans_MOV_acc_loc16_shft16(DisasContext* ctx, arg_MOV_acc_loc16_shft
 static bool trans_MOV_ar6_loc16(DisasContext* ctx, arg_MOV_ar6_loc16* a) {
     TCGv target_value = tcg_temp_new_i32();
     C28X_READ_LOC16(a->loc16, target_value);
-    tcg_gen_andi_tl(target_value, target_value, 0xffff);
-    tcg_gen_andi_tl(cpu_r[C28X_REG_XAR6], cpu_r[C28X_REG_XAR6], 0xffff0000);
-    tcg_gen_or_tl(cpu_r[C28X_REG_XAR6], cpu_r[C28X_REG_XAR6], target_value);
+    REG_LO_W(target_value, cpu_r[C28X_REG_XAR6])
     return true;
 }
 
 static bool trans_MOV_ar7_loc16(DisasContext* ctx, arg_MOV_ar7_loc16* a) {
     TCGv target_value = tcg_temp_new_i32();
     C28X_READ_LOC16(a->loc16, target_value);
-    tcg_gen_andi_tl(target_value, target_value, 0xffff);
-    tcg_gen_andi_tl(cpu_r[C28X_REG_XAR7], cpu_r[C28X_REG_XAR7], 0xffff0000);
-    tcg_gen_or_tl(cpu_r[C28X_REG_XAR7], cpu_r[C28X_REG_XAR7], target_value);
+    REG_LO_W(target_value, cpu_r[C28X_REG_XAR7])
     return true;
 }
 
@@ -1524,17 +1541,14 @@ static bool trans_MOV_loc16_t(DisasContext* ctx, arg_MOV_loc16_t* a) {
 static bool trans_MOV_ph_loc16(DisasContext* ctx, arg_MOV_ph_loc16* a) {
     TCGv target_value = tcg_temp_new_i32();
     C28X_READ_LOC16(a->loc16, target_value);
-    tcg_gen_shli_tl(target_value, target_value, 16);
-    tcg_gen_andi_tl(cpu_r[C28X_REG_P], cpu_r[C28X_REG_P], 0xffff);
-    tcg_gen_or_tl(cpu_r[C28X_REG_P], cpu_r[C28X_REG_P], target_value);
+    REG_HI_W(target_value, cpu_r[C28X_REG_P])
     return true;
 }
 
 static bool trans_MOV_pl_loc16(DisasContext* ctx, arg_MOV_pl_loc16* a) {
     TCGv target_value = tcg_temp_new_i32();
     C28X_READ_LOC16(a->loc16, target_value);
-    tcg_gen_andi_tl(cpu_r[C28X_REG_P], cpu_r[C28X_REG_P], 0xffff0000);
-    tcg_gen_or_tl(cpu_r[C28X_REG_P], cpu_r[C28X_REG_P], target_value);
+    REG_LO_W(target_value, cpu_r[C28X_REG_P])
     return true;
 }
 
@@ -1707,7 +1721,7 @@ LD_ST_XAR_LOC32(4)
 LD_ST_XAR_LOC32(5)
 LD_ST_XAR_LOC32(6)
 LD_ST_XAR_LOC32(7)
-#undef LD_ST_XARn_LOC32
+#undef LD_ST_XAR_LOC32
 
 static bool trans_MOVL_loc32_xt(DisasContext* ctx, arg_MOVL_loc32_xt* a) {
     C28X_WRITE_LOC32(a->loc32, cpu_r[C28X_REG_XT]);
@@ -2026,6 +2040,133 @@ static bool trans_ORB_ax_imm8(DisasContext* ctx, arg_ORB_ax_imm8* a) {
     REG_AX_W(ax, a->ax);
     tcg_gen_ext16s_tl(ax, ax);
     SET_NZ_FLAGS(ax)
+    return true;
+}
+
+static bool trans_POP_acc(DisasContext* ctx, arg_POP_acc* a) {
+    gen_pop_value_length(cpu_r[C28X_REG_ACC], 2);
+    SET_NZ_FLAGS(cpu_r[C28X_REG_ACC]);
+    return true;
+}
+
+static bool trans_POP_ar1_ar0(DisasContext* ctx, arg_POP_ar1_ar0* a) {
+    TCGv stk_value = tcg_temp_new_i32();
+    gen_pop_value_length(stk_value, 2);
+    REG_LO_W(stk_value, cpu_r[C28X_REG_XAR0]);
+    tcg_gen_shri_tl(stk_value, stk_value, 16);
+    REG_HI_W(stk_value, cpu_r[C28X_REG_XAR1]);
+    return true;
+}
+
+static bool trans_POP_ar3_ar2(DisasContext* ctx, arg_POP_ar3_ar2* a) {
+    TCGv stk_value = tcg_temp_new_i32();
+    gen_pop_value_length(stk_value, 2);
+    REG_LO_W(stk_value, cpu_r[C28X_REG_XAR2]);
+    tcg_gen_shri_tl(stk_value, stk_value, 16);
+    REG_HI_W(stk_value, cpu_r[C28X_REG_XAR3]);
+    return true;
+}
+
+static bool trans_POP_ar5_ar4(DisasContext* ctx, arg_POP_ar5_ar4* a) {
+    TCGv stk_value = tcg_temp_new_i32();
+    gen_pop_value_length(stk_value, 2);
+    REG_LO_W(stk_value, cpu_r[C28X_REG_XAR4]);
+    tcg_gen_shri_tl(stk_value, stk_value, 16);
+    REG_HI_W(stk_value, cpu_r[C28X_REG_XAR5]);
+    return true;
+}
+
+static bool trans_POP_ar1h_ar0h(DisasContext* ctx, arg_POP_ar1h_ar0h* a) {
+    TCGv stk_value = tcg_temp_new_i32();
+    gen_pop_value_length(stk_value, 2);
+    REG_HI_W(stk_value, cpu_r[C28X_REG_XAR0]);
+    tcg_gen_shri_tl(stk_value, stk_value, 16);
+    REG_HI_W(stk_value, cpu_r[C28X_REG_XAR1]);
+    return true;
+}
+
+static bool trans_POP_dbgier(DisasContext* ctx, arg_POP_dbgier* a) {
+    gen_pop_value_length(cpu_r[C28X_REG_DBGIER], 1);
+    return true;
+}
+
+static bool trans_POP_dp(DisasContext* ctx, arg_POP_dp* a) {
+    gen_pop_value_length(cpu_r[C28X_REG_DP], 1);
+    return true;
+}
+
+static bool trans_POP_dp_st1(DisasContext* ctx, arg_POP_dp_st1* a) {
+    TCGv stk_value = tcg_temp_new_i32();
+    gen_pop_value_length(stk_value, 2);
+    c28x_unpack_status_reg_1(cpu_sr, stk_value);
+    tcg_gen_shri_tl(stk_value, stk_value, 16);
+    tcg_gen_mov_tl(cpu_r[C28X_REG_DP], stk_value);
+    return true;
+}
+
+static bool trans_POP_ifr(DisasContext* ctx, arg_POP_ifr* a) {
+    gen_pop_value_length(cpu_r[C28X_REG_IFR], 1);
+    return true;
+}
+
+static bool trans_POP_loc16(DisasContext* ctx, arg_POP_loc16* a) {
+    TCGv stk_value = tcg_temp_new_i32();
+    gen_pop_value_length(stk_value, 1);
+    C28X_WRITE_LOC16(a->loc16, stk_value);
+    CHECK_DST_AX_NZ(a->loc16, stk_value);
+    return true;
+}
+
+static bool trans_POP_p(DisasContext* ctx, arg_POP_p* a) {
+    gen_pop_value_length(cpu_r[C28X_REG_P], 2);
+    return true;
+}
+
+static bool trans_POP_rpc(DisasContext* ctx, arg_POP_rpc* a) {
+    gen_pop_value_length(cpu_r[C28X_REG_RPC], 2);
+    return true;
+}
+
+static bool trans_POP_st0(DisasContext* ctx, arg_POP_st0* a) {
+    TCGv stk_value = tcg_temp_new_i32();
+    gen_pop_value_length(stk_value, 1);
+    c28x_unpack_status_reg_0(cpu_sr, stk_value);
+    return true;
+}
+
+static bool trans_POP_st1(DisasContext* ctx, arg_POP_st1* a) {
+    TCGv stk_value = tcg_temp_new_i32();
+    gen_pop_value_length(stk_value, 1);
+    c28x_unpack_status_reg_1(cpu_sr, stk_value);
+    return true;
+}
+
+static bool trans_POP_t_st0(DisasContext* ctx, arg_POP_t_st0* a) {
+    TCGv stk_value = tcg_temp_new_i32();
+    gen_pop_value_length(stk_value, 2);
+    WRITE_REG_T(stk_value);
+    tcg_gen_shri_tl(stk_value, stk_value, 16);
+    c28x_unpack_status_reg_0(cpu_sr, stk_value);
+    return true;
+}
+
+#define POP_XAR(n)                                                                                                     \
+    static bool trans_POP_xar##n(DisasContext* ctx, arg_POP_xar##n* a) {                                               \
+        gen_pop_value_length(cpu_r[C28X_REG_XAR##n], 2);                                                               \
+        return true;                                                                                                   \
+    }
+POP_XAR(0)
+POP_XAR(1)
+POP_XAR(2)
+POP_XAR(3)
+POP_XAR(4)
+POP_XAR(5)
+POP_XAR(6)
+POP_XAR(7)
+#undef POP_XAR
+
+static bool trans_POP_xt(DisasContext* ctx, arg_POP_xt* a) {
+    gen_pop_value_length(cpu_r[C28X_REG_XT], 2);
     return true;
 }
 

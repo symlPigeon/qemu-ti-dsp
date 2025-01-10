@@ -28,7 +28,7 @@ static const uint32_t c28_mode_cpu_sr_idx[] = {SXM_FLAG,  OVM_FLAG,  TC_FLAG,   
  * @param mask A bitmask indicating which flag(s) to modify.
  * @param set A boolean value indicating whether to set (1) or clear (0) the flag(s).
  */
-void c28_gen_set_mode_flag(TCGv cpu_sr[], uint8_t mask, int set);
+void c28x_gen_set_mode_flag(TCGv cpu_sr[], uint8_t mask, int set);
 
 /**
  * Parses the given mode flag mask and returns a string representation of the mode.
@@ -38,7 +38,12 @@ void c28_gen_set_mode_flag(TCGv cpu_sr[], uint8_t mask, int set);
  */
 char* c28x_parse_mode_flag(uint8_t mask);
 
-#define C28X_CLRC_MODE(cpu_sr, mask) c28_gen_set_mode_flag(cpu_sr, mask, 0)
-#define C28X_SETC_MODE(cpu_sr, mask) c28_gen_set_mode_flag(cpu_sr, mask, 1)
+void c28x_pack_status_reg_0(TCGv dst, TCGv cpu_sr[]);
+void c28x_unpack_status_reg_0(TCGv cpu_sr[], TCGv value);
+void c28x_pack_status_reg_1(TCGv dst, TCGv cpu_sr[]);
+void c28x_unpack_status_reg_1(TCGv cpu_sr[], TCGv value);
+
+#define C28X_CLRC_MODE(cpu_sr, mask) c28x_gen_set_mode_flag(cpu_sr, mask, 0)
+#define C28X_SETC_MODE(cpu_sr, mask) c28x_gen_set_mode_flag(cpu_sr, mask, 1)
 
 #endif
